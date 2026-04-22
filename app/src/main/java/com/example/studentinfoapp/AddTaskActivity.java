@@ -100,10 +100,10 @@ public class AddTaskActivity extends AppCompatActivity {
             edtTitle.setError("Task name is required");
             return false;
         }
-//        if (TextUtils.isEmpty(edtDeadline.getText().toString().trim())) {
-//            edtDeadline.setError("Due date is required");
-//            return false;
-//        }
+        if (TextUtils.isEmpty(edtDeadline.getText().toString().trim())) {
+            edtDeadline.setError("Due date is required");
+            return false;
+        }
         return true;
     }
 
