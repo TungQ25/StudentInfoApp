@@ -2,17 +2,20 @@ package com.example.studentinfoapp;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 public class Task implements Serializable {
+    private final String id;
     private String title;
     private String description;
     private String category;
     private String deadline;
     private boolean isCompleted;
     private String priority;
-    private boolean isSelected; // Added for multi-select
+    private boolean isSelected;
 
     public Task(String title, String description, String category, String deadline, boolean isCompleted, String priority) {
+        this.id = UUID.randomUUID().toString();
         this.title = title;
         this.description = description;
         this.category = category;
@@ -23,6 +26,8 @@ public class Task implements Serializable {
     }
 
     // Getters and Setters
+    public String getId() { return id; }
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 
@@ -51,6 +56,7 @@ public class Task implements Serializable {
         Task task = (Task) o;
         return isCompleted == task.isCompleted &&
                 isSelected == task.isSelected &&
+                Objects.equals(id, task.id) &&
                 Objects.equals(title, task.title) &&
                 Objects.equals(description, task.description) &&
                 Objects.equals(category, task.category) &&
@@ -60,6 +66,6 @@ public class Task implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(title, description, category, deadline, isCompleted, priority, isSelected);
+        return Objects.hash(id, title, description, category, deadline, isCompleted, priority, isSelected);
     }
 }
