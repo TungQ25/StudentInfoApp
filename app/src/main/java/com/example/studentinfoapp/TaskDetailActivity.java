@@ -18,7 +18,7 @@ public class TaskDetailActivity extends AppCompatActivity {
     TextView tvTitle, tvDescription, tvCategory, tvPriority, tvDeadline, tvStatus;
     Button btnEdit, btnDelete;
 
-    String title, description, category, priority, deadline;
+    String id, title, description, category, priority, deadline;
     boolean isCompleted;
     int position;
     ActivityResultLauncher<Intent> editLauncher;
@@ -44,6 +44,7 @@ public class TaskDetailActivity extends AppCompatActivity {
         btnDelete = findViewById(R.id.btnDelete);
 
         Intent intent = getIntent();
+        id = intent.getStringExtra("id");
         title = intent.getStringExtra("title");
         description = intent.getStringExtra("description");
         category = intent.getStringExtra("category");
@@ -70,6 +71,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                         updateUI();
 
                         Intent resultIntent = new Intent();
+                        resultIntent.putExtra("id", id);
                         resultIntent.putExtra("title", title);
                         resultIntent.putExtra("description", description);
                         resultIntent.putExtra("category", category);
@@ -85,6 +87,7 @@ public class TaskDetailActivity extends AppCompatActivity {
 
         btnEdit.setOnClickListener(v -> {
             Intent editIntent = new Intent(TaskDetailActivity.this, AddTaskActivity.class);
+            editIntent.putExtra("id", id);
             editIntent.putExtra("title", title);
             editIntent.putExtra("description", description);
             editIntent.putExtra("category", category);

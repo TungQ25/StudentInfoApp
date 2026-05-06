@@ -6,12 +6,10 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -30,6 +28,8 @@ public class AddTaskActivity extends AppCompatActivity {
 
     boolean isEdit = false;
     int position = -1;
+    String id = null;
+    boolean isCompleted = false;
 
     String[] categories = {"Homework", "Project", "Exam"};
 
@@ -60,17 +60,20 @@ public class AddTaskActivity extends AppCompatActivity {
         if (savedInstanceState != null) {
             isEdit = savedInstanceState.getBoolean("isEdit");
             position = savedInstanceState.getInt("position");
-            Log.d(TAG, "onCreate: Restored from savedInstanceState");
+            id = savedInstanceState.getString("id");
+            isCompleted = savedInstanceState.getBoolean("isCompleted");
         } else {
             Intent intent = getIntent();
             if (intent != null) {
                 isEdit = intent.getBooleanExtra("isEdit", false);
                 position = intent.getIntExtra("position", -1);
+                id = intent.getStringExtra("id");
 
                 if (isEdit) {
                     edtTitle.setText(intent.getStringExtra("title"));
                     edtDescription.setText(intent.getStringExtra("description"));
                     edtDeadline.setText(intent.getStringExtra("deadline"));
+                    isCompleted = intent.getBooleanExtra("completed", false);
 
                     String category = intent.getStringExtra("category");
                     for (int i = 0; i < categories.length; i++) {
@@ -118,11 +121,13 @@ public class AddTaskActivity extends AppCompatActivity {
         String priority = rbSelected.getText().toString();
 
         Intent resultIntent = new Intent();
+        resultIntent.putExtra("id", id);
         resultIntent.putExtra("title", title);
         resultIntent.putExtra("description", description);
         resultIntent.putExtra("category", category);
         resultIntent.putExtra("deadline", deadline);
         resultIntent.putExtra("priority", priority);
+        resultIntent.putExtra("completed", isCompleted);
         resultIntent.putExtra("isEdit", isEdit);
         resultIntent.putExtra("position", position);
 
@@ -135,16 +140,18 @@ public class AddTaskActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         outState.putBoolean("isEdit", isEdit);
         outState.putInt("position", position);
+        outState.putString("id", id);
+        outState.putBoolean("isCompleted", isCompleted);
     }
 
-    @Override
-    protected void onStart() { super.onStart(); Log.d(TAG, "onStart"); }
-    @Override
-    protected void onResume() { super.onResume(); Log.d(TAG, "onResume"); }
-    @Override
-    protected void onPause() { super.onPause(); Log.d(TAG, "onPause"); }
-    @Override
-    protected void onStop() { super.onStop(); Log.d(TAG, "onStop"); }
-    @Override
-    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "onDestroy"); }
+//    @Override
+//    protected void onStart() { super.onStart(); Log.d(TAG, "onStart"); }
+//    @Override
+//    protected void onResume() { super.onResume(); Log.d(TAG, "onResume"); }
+//    @Override
+//    protected void onPause() { super.onPause(); Log.d(TAG, "onPause"); }
+//    @Override
+//    protected void onStop() { super.onStop(); Log.d(TAG, "onStop"); }
+//    @Override
+//    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "onDestroy"); }
 }
