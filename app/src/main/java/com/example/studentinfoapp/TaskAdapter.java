@@ -1,48 +1,111 @@
 package com.example.studentinfoapp;
 
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class TaskAdapter extends ArrayAdapter<Task> {
-    private Context context;
-    private List<Task> taskList;
+public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
 
-    public TaskAdapter(@NonNull Context context, List<Task> taskList) {
-        super(context, 0, taskList);
-        this.context = context;
-        this.taskList = taskList;
+    private final OnTaskClickListener listener;
+
+    // Interface để bắt sự kiện click và long click
+    public interface OnTaskClickListener {
+        void onTaskClick(Task task, int position);
+        void onTaskLongClick(Task task, int position);
+        void onStatusChanged(Task task, boolean isCompleted);
+    }
+
+    public TaskAdapter(OnTaskClickListener listener) {
+        super(new DiffUtil.ItemCallback<Task>() {
+            @Override
+            public boolean areItemsTheSame(@NonNull Task oldItem, @NonNull Task newItem) {
+                return oldItem.getTitle().equals(newItem.getTitle());
+            }
+
+            @Override
+            public boolean areContentsTheSame(@NonNull Task oldItem, @NonNull Task newItem) {
+                return oldItem.equals(newItem);
+            }
+        });
+        this.listener = listener;
     }
 
     @NonNull
     @Override
-    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(R.layout.list_item_task, parent, false);
+    // Dùng để lấy layout từ list_item_task và tạo ra ViewHolder (tái sử dụng view)
+    public TaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item_task, parent, false);
+        return new TaskViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
+        Task task = getItem(position);
+        holder.bind(task, listener);
+    }
+
+    class TaskViewHolder extends RecyclerView.ViewHolder {
+        TextView tvTitle, tvDate;
+        CheckBox cbCompleted;
+        ImageView ivPriority;
+        View root;
+
+        public TaskViewHolder(@NonNull View itemView) {
+            super(itemView);
+            root = itemView;
+            tvTitle = itemView.findViewById(R.id.taskTitle);
+            tvDate = itemView.findViewById(R.id.taskDate);
+            cbCompleted = itemView.findViewById(R.id.checkComplete);
+            ivPriority = itemView.findViewById(R.id.priorityIcon);
         }
 
-        Task currentTask = taskList.get(position);
+        // Bind data to views
+        public void bind(Task task, OnTaskClickListener listener) {
+            tvTitle.setText(task.getTitle());
+            tvDate.setText(task.getDeadline());
+            
+            // Selection visual
+            if (task.isSelected()) {
+                root.setBackgroundColor(0x336200EE);
+            } else {
+                root.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            }
 
-        TextView tvTitle = convertView.findViewById(R.id.tvTaskTitle);
-        CheckBox cbCompleted = convertView.findViewById(R.id.cbTaskCompleted);
+            cbCompleted.setOnCheckedChangeListener(null);
+            cbCompleted.setChecked(task.isCompleted());
+            cbCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                listener.onStatusChanged(task, isChecked);
+            });
 
-        tvTitle.setText(currentTask.getTitle());
-        cbCompleted.setOnCheckedChangeListener(null); // Clear listener before setting status
-        cbCompleted.setChecked(currentTask.isCompleted());
+            // Set priority icon based on priority string
+            if ("High".equals(task.getPriority())) {
+                ivPriority.setVisibility(View.VISIBLE);
+                ivPriority.setImageResource(android.R.drawable.ic_notification_overlay);
+                ivPriority.setColorFilter(android.graphics.Color.RED);
+            } else if ("Medium".equals(task.getPriority())) {
+                ivPriority.setVisibility(View.VISIBLE);
+                ivPriority.setImageResource(android.R.drawable.ic_notification_overlay);
+                ivPriority.setColorFilter(android.graphics.Color.YELLOW);
+            } else {
+                ivPriority.setVisibility(View.GONE);
+            }
 
-        cbCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            currentTask.setCompleted(isChecked);
-        });
-
-        return convertView;
+            root.setOnClickListener(v -> listener.onTaskClick(task, getAdapterPosition()));
+            root.setOnLongClickListener(v -> {
+                listener.onTaskLongClick(task, getAdapterPosition());
+                return true;
+            });
+        }
     }
 }

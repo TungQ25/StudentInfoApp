@@ -1,6 +1,7 @@
 package com.example.studentinfoapp;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class Task implements Serializable {
     private String title;
@@ -9,6 +10,7 @@ public class Task implements Serializable {
     private String deadline;
     private boolean isCompleted;
     private String priority;
+    private boolean isSelected; // Added for multi-select
 
     public Task(String title, String description, String category, String deadline, boolean isCompleted, String priority) {
         this.title = title;
@@ -17,8 +19,10 @@ public class Task implements Serializable {
         this.deadline = deadline;
         this.isCompleted = isCompleted;
         this.priority = priority;
+        this.isSelected = false;
     }
 
+    // Getters and Setters
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 
@@ -36,4 +40,26 @@ public class Task implements Serializable {
 
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
+
+    public boolean isSelected() { return isSelected; }
+    public void setSelected(boolean selected) { isSelected = selected; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Task task = (Task) o;
+        return isCompleted == task.isCompleted &&
+                isSelected == task.isSelected &&
+                Objects.equals(title, task.title) &&
+                Objects.equals(description, task.description) &&
+                Objects.equals(category, task.category) &&
+                Objects.equals(deadline, task.deadline) &&
+                Objects.equals(priority, task.priority);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(title, description, category, deadline, isCompleted, priority, isSelected);
+    }
 }

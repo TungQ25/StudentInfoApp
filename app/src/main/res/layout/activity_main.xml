@@ -77,12 +77,24 @@
             android:text="@string/hoc_ky"
             android:textSize="20sp" />
 
-        <ListView
-            android:id="@+id/listView"
+        <!-- Horizontal RecyclerView for Categories -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvCategories"
+            android:layout_width="match_parent"
+            android:layout_marginTop="8dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingBottom="8dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/list_item_category" />
+
+        <!-- Replacing ListView with RecyclerView for Tasks -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvTasks"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="8dp" />
 
         <Button
             android:id="@+id/btnAddTask"
@@ -90,5 +102,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Add Task" />
+
+        <Button
+            android:id="@+id/btnDeleteSelected"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Delete Selected"
+            android:visibility="gone" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
