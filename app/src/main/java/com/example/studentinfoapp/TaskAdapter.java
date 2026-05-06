@@ -30,7 +30,8 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
         super(new DiffUtil.ItemCallback<Task>() {
             @Override
             public boolean areItemsTheSame(@NonNull Task oldItem, @NonNull Task newItem) {
-                return oldItem.getTitle().equals(newItem.getTitle());
+                // Sử dụng getId() để so sánh chính xác các Task
+                return oldItem.getId().equals(newItem.getId());
             }
 
             @Override
