@@ -1,5 +1,7 @@
 package com.example.studentinfoapp;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,9 +21,9 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
 
     private final OnTaskClickListener listener;
 
-    // Interface để bắt sự kiện click và long click
     public interface OnTaskClickListener {
         void onTaskClick(Task task, int position);
+        void onTaskDoubleClick(Task task, int position);
         void onTaskLongClick(Task task, int position);
         void onStatusChanged(Task task, boolean isCompleted);
     }
@@ -30,7 +32,6 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
         super(new DiffUtil.ItemCallback<Task>() {
             @Override
             public boolean areItemsTheSame(@NonNull Task oldItem, @NonNull Task newItem) {
-                // Sử dụng getId() để so sánh chính xác các Task
                 return oldItem.getId().equals(newItem.getId());
             }
 
@@ -44,7 +45,6 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
 
     @NonNull
     @Override
-    // Dùng để lấy layout từ list_item_task và tạo ra ViewHolder (tái sử dụng view)
     public TaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item_task, parent, false);
         return new TaskViewHolder(view);
@@ -61,6 +61,10 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
         CheckBox cbCompleted;
         ImageView ivPriority;
         View root;
+        
+        private long lastClickTime = 0;
+        private final Handler handler = new Handler(Looper.getMainLooper());
+        private Runnable pendingClick;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -71,14 +75,12 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
             ivPriority = itemView.findViewById(R.id.priorityIcon);
         }
 
-        // Bind data to views
         public void bind(Task task, OnTaskClickListener listener) {
             tvTitle.setText(task.getTitle());
             tvDate.setText(task.getDeadline());
             
-            // Selection visual
             if (task.isSelected()) {
-                root.setBackgroundColor(0x336200EE);
+                root.setBackgroundColor(0x332F2F2F);
             } else {
                 root.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             }
@@ -89,7 +91,6 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
                 listener.onStatusChanged(task, isChecked);
             });
 
-            // Set priority icon based on priority string
             if ("High".equals(task.getPriority())) {
                 ivPriority.setVisibility(View.VISIBLE);
                 ivPriority.setImageResource(android.R.drawable.ic_notification_overlay);
@@ -102,9 +103,30 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
                 ivPriority.setVisibility(View.GONE);
             }
 
-            root.setOnClickListener(v -> listener.onTaskClick(task, getAdapterPosition()));
+            root.setOnClickListener(v -> {
+                long currentTime = System.currentTimeMillis();
+                int position = getBindingAdapterPosition();
+                
+                if (currentTime - lastClickTime < 300) {
+                    // Double Click detected: Hủy click đơn đang chờ và chạy double click
+                    if (pendingClick != null) {
+                        handler.removeCallbacks(pendingClick);
+                        pendingClick = null;
+                    }
+                    listener.onTaskDoubleClick(task, position);
+                } else {
+                    // Click đơn: Chờ 300ms xem có click thứ 2 không
+                    pendingClick = () -> {
+                        listener.onTaskClick(task, position);
+                        pendingClick = null;
+                    };
+                    handler.postDelayed(pendingClick, 300);
+                }
+                lastClickTime = currentTime;
+            });
+
             root.setOnLongClickListener(v -> {
-                listener.onTaskLongClick(task, getAdapterPosition());
+                listener.onTaskLongClick(task, getBindingAdapterPosition());
                 return true;
             });
         }

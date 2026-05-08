@@ -3,6 +3,8 @@ package com.example.studentinfoapp;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.graphics.Rect;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -29,12 +31,13 @@ public class MainActivity extends AppCompatActivity {
 
     RecyclerView rvTasks, rvCategories;
     Button btnAddTask, btnDeleteSelected;
+    View fragmentContainer, detailScrim;
     TaskAdapter taskAdapter;
     CategoryAdapter categoryAdapter;
     TaskViewModel taskViewModel;
 
     ActivityResultLauncher<Intent> addTaskLauncher;
-    ActivityResultLauncher<Intent> detailLauncher;
+    ActivityResultLauncher<Intent> detailTaskLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
         rvCategories = findViewById(R.id.rvCategories);
         btnAddTask = findViewById(R.id.btnAddTask);
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
+        fragmentContainer = findViewById(R.id.fragment_container);
+        detailScrim = findViewById(R.id.detail_scrim); 
 
         // Initialize ViewModel - đảm bảo dữ liệu được giữ nguyên khi xoay màn hình
         taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
@@ -63,6 +68,15 @@ public class MainActivity extends AppCompatActivity {
         taskViewModel.getTasks().observe(this, tasks -> {
             taskAdapter.submitList(new ArrayList<>(tasks));
         });
+
+        // Lắng nghe kết quả trả về từ TaskDetailFragment (Fragment Result API)
+        getSupportFragmentManager().setFragmentResultListener(TaskDetailFragment.RESULT_KEY, this, (requestKey, bundle) -> {
+            String resultMessage = bundle.getString(TaskDetailFragment.RESULT_MESSAGE);
+            if (resultMessage != null) {
+                Toast.makeText(this, resultMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
+        getSupportFragmentManager().addOnBackStackChangedListener(this::updateDetailOverlayVisibility);
 
         btnAddTask.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
@@ -80,8 +94,13 @@ public class MainActivity extends AppCompatActivity {
                     task.setSelected(!task.isSelected());
                     taskAdapter.notifyItemChanged(position);
                 } else {
-                    openDetail(task, position);
+                    showTaskDetail(task);
                 }
+            }
+
+            @Override
+            public void onTaskDoubleClick(Task task, int position) {
+                openTaskDetailActivity(task, position);
             }
 
             @Override
@@ -139,17 +158,54 @@ public class MainActivity extends AppCompatActivity {
         btnDeleteSelected.setVisibility(View.GONE);
     }
 
-    private void openDetail(Task task, int position) {
+    private void showTaskDetail(Task task) {
+        TaskDetailFragment fragment = TaskDetailFragment.newInstance(task);
+        fragmentContainer.setVisibility(View.VISIBLE);
+        detailScrim.setVisibility(View.VISIBLE);
+        getSupportFragmentManager().beginTransaction()
+                // Animation khi mở/đóng TaskDetailFragment
+//                .setCustomAnimations(
+//                        R.anim.slide_in_right,
+//                        R.anim.slide_out_left,
+//                        R.anim.slide_in_left,
+//                        R.anim.slide_out_right
+//                )
+                .replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    private void openTaskDetailActivity(Task task, int position) {
         Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
         intent.putExtra("id", task.getId());
         intent.putExtra("title", task.getTitle());
         intent.putExtra("description", task.getDescription());
         intent.putExtra("category", task.getCategory());
+        intent.putExtra("priority", task.getPriority());
         intent.putExtra("deadline", task.getDeadline());
         intent.putExtra("completed", task.isCompleted());
-        intent.putExtra("priority", task.getPriority());
         intent.putExtra("position", position);
-        detailLauncher.launch(intent);
+        detailTaskLauncher.launch(intent);
+    }
+
+    private void updateDetailOverlayVisibility() {
+        boolean hasDetail = getSupportFragmentManager().getBackStackEntryCount() > 0;
+        fragmentContainer.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+        detailScrim.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getAction() == MotionEvent.ACTION_DOWN && getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            Rect detailBounds = new Rect();
+            fragmentContainer.getGlobalVisibleRect(detailBounds);
+            int x = (int) ev.getRawX();
+            int y = (int) ev.getRawY();
+            if (!detailBounds.contains(x, y)) {
+                getSupportFragmentManager().popBackStack();
+            }
+        }
+        return super.dispatchTouchEvent(ev);
     }
 
     private void setupLaunchers() {
@@ -168,17 +224,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        detailLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        detailTaskLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                 Intent data = result.getData();
-                int delPos = data.getIntExtra("delete_position", -1);
-                if (delPos != -1) {
-                    Task taskToRemove = taskAdapter.getCurrentList().get(delPos);
-                    taskViewModel.delete(taskToRemove.getId());
-                } else if (data.getBooleanExtra("updated", false)) {
-                    String id = data.getStringExtra("id");
+                String taskId = data.getStringExtra("id");
+                if (taskId == null) {
+                    return;
+                }
+
+                if (data.getBooleanExtra("deleted", false)) {
+                    taskViewModel.delete(taskId);
+                    return;
+                }
+
+                if (data.getBooleanExtra("updated", false)) {
                     Task updatedTask = new Task(
-                            id,
+                            taskId,
                             data.getStringExtra("title"),
                             data.getStringExtra("description"),
                             data.getStringExtra("category"),
@@ -204,9 +265,4 @@ public class MainActivity extends AppCompatActivity {
 //    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "onDestroy"); }
 //    @Override
 //    protected void onRestart() { super.onRestart(); Log.d(TAG, "onRestart"); }
-
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-    }
 }
