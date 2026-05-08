@@ -19,6 +19,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/colorPrimary"
             app:title="@string/title_add_task"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
             app:titleTextColor="@color/colorOnPrimary" />
     </com.google.android.material.appbar.AppBarLayout>
 
