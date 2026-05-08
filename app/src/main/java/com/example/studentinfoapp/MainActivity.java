@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -28,9 +29,9 @@ public class MainActivity extends AppCompatActivity {
 
     RecyclerView rvTasks, rvCategories;
     Button btnAddTask, btnDeleteSelected;
-    ArrayList<Task> taskList;
     TaskAdapter taskAdapter;
     CategoryAdapter categoryAdapter;
+    TaskViewModel taskViewModel;
 
     ActivityResultLauncher<Intent> addTaskLauncher;
     ActivityResultLauncher<Intent> detailLauncher;
@@ -52,15 +53,16 @@ public class MainActivity extends AppCompatActivity {
         btnAddTask = findViewById(R.id.btnAddTask);
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
 
-        if (savedInstanceState != null) {
-            taskList = (ArrayList<Task>) savedInstanceState.getSerializable("taskList");
-        }
-        if (taskList == null) {
-            taskList = new ArrayList<>();
-        }
+        // Initialize ViewModel - đảm bảo dữ liệu được giữ nguyên khi xoay màn hình
+        taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
 
         setupRecyclerViews();
         setupLaunchers();
+
+        // Observe tasks from ViewModel - UI tự động cập nhật khi dữ liệu thay đổi (ví dụ: khi thêm, xóa, sửa)
+        taskViewModel.getTasks().observe(this, tasks -> {
+            taskAdapter.submitList(new ArrayList<>(tasks));
+        });
 
         btnAddTask.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
@@ -71,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerViews() {
-        // Task RecyclerView with DiffUtil & Adapter
         taskAdapter = new TaskAdapter(new TaskAdapter.OnTaskClickListener() {
             @Override
             public void onTaskClick(Task task, int position) {
@@ -91,11 +92,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStatusChanged(Task task, boolean isCompleted) {
                 task.setCompleted(isCompleted);
+                taskViewModel.update(task);
             }
         });
         rvTasks.setLayoutManager(new LinearLayoutManager(this));
         rvTasks.setAdapter(taskAdapter);
-        taskAdapter.submitList(new ArrayList<>(taskList));
 
         // Swipe-to-delete
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -107,8 +108,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
-                taskList.remove(position);
-                taskAdapter.submitList(new ArrayList<>(taskList));
+                Task task = taskAdapter.getCurrentList().get(position);
+                taskViewModel.delete(task.getId());
                 Toast.makeText(MainActivity.this, "Task deleted", Toast.LENGTH_SHORT).show();
             }
         }).attachToRecyclerView(rvTasks);
@@ -117,7 +118,6 @@ public class MainActivity extends AppCompatActivity {
         List<String> categories = Arrays.asList("All", "Homework", "Project", "Exam");
         categoryAdapter = new CategoryAdapter(categories, category -> {
             Toast.makeText(MainActivity.this, "Filter: " + category, Toast.LENGTH_SHORT).show();
-            // TODO: Filter logic could be added here
         });
         rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvCategories.setAdapter(categoryAdapter);
@@ -130,18 +130,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void deleteSelectedTasks() {
-        List<Task> toRemove = new ArrayList<>();
-        for (Task t : taskList) {
-            if (t.isSelected()) toRemove.add(t);
+        List<Task> currentList = taskAdapter.getCurrentList();
+        for (Task t : currentList) {
+            if (t.isSelected()) {
+                taskViewModel.delete(t.getId());
+            }
         }
-        taskList.removeAll(toRemove);
-        taskAdapter.submitList(new ArrayList<>(taskList));
         btnDeleteSelected.setVisibility(View.GONE);
-        Toast.makeText(this, toRemove.size() + " tasks deleted", Toast.LENGTH_SHORT).show();
     }
 
     private void openDetail(Task task, int position) {
         Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
+        intent.putExtra("id", task.getId());
         intent.putExtra("title", task.getTitle());
         intent.putExtra("description", task.getDescription());
         intent.putExtra("category", task.getCategory());
@@ -164,8 +164,7 @@ public class MainActivity extends AppCompatActivity {
                         data.getBooleanExtra("completed", false),
                         data.getStringExtra("priority")
                 );
-                taskList.add(task);
-                taskAdapter.submitList(new ArrayList<>(taskList));
+                taskViewModel.insert(task);
             }
         });
 
@@ -174,21 +173,21 @@ public class MainActivity extends AppCompatActivity {
                 Intent data = result.getData();
                 int delPos = data.getIntExtra("delete_position", -1);
                 if (delPos != -1) {
-                    taskList.remove(delPos);
+                    Task taskToRemove = taskAdapter.getCurrentList().get(delPos);
+                    taskViewModel.delete(taskToRemove.getId());
                 } else if (data.getBooleanExtra("updated", false)) {
-                    int pos = data.getIntExtra("position", -1);
-                    if (pos != -1) {
-                        taskList.set(pos, new Task(
-                                data.getStringExtra("title"),
-                                data.getStringExtra("description"),
-                                data.getStringExtra("category"),
-                                data.getStringExtra("deadline"),
-                                data.getBooleanExtra("completed", false),
-                                data.getStringExtra("priority")
-                        ));
-                    }
+                    String id = data.getStringExtra("id");
+                    Task updatedTask = new Task(
+                            id,
+                            data.getStringExtra("title"),
+                            data.getStringExtra("description"),
+                            data.getStringExtra("category"),
+                            data.getStringExtra("deadline"),
+                            data.getBooleanExtra("completed", false),
+                            data.getStringExtra("priority")
+                    );
+                    taskViewModel.update(updatedTask);
                 }
-                taskAdapter.submitList(new ArrayList<>(taskList));
             }
         });
     }
@@ -209,6 +208,5 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putSerializable("taskList", taskList);
     }
 }
