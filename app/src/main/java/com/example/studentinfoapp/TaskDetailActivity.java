@@ -81,6 +81,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                         resultIntent.putExtra("position", position);
                         resultIntent.putExtra("updated", true);
                         setResult(RESULT_OK, resultIntent);
+                        finish();
                     }
                 }
         );
@@ -101,7 +102,8 @@ public class TaskDetailActivity extends AppCompatActivity {
 
         btnDelete.setOnClickListener(v -> {
             Intent resultIntent = new Intent();
-            resultIntent.putExtra("delete_position", position);
+            resultIntent.putExtra("id", id);
+            resultIntent.putExtra("deleted", true);
             setResult(RESULT_OK, resultIntent);
             finish();
         });
