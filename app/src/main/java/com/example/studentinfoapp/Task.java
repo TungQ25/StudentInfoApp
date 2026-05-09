@@ -48,6 +48,10 @@ public class Task implements Serializable {
     public void setSelected(boolean selected) { isSelected = selected; }
     public void setCompleted(boolean completed) { isCompleted = completed; }
 
+    private String imagePath; 
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
