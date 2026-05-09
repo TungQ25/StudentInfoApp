@@ -1,10 +1,12 @@
 package com.example.studentinfoapp;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
@@ -51,6 +53,7 @@ public class TaskDetailFragment extends Fragment {
         TextView tvDeadline = view.findViewById(R.id.tvDetailDeadline);
         TextView tvPriority = view.findViewById(R.id.tvDetailPriority);
         TextView tvStatus = view.findViewById(R.id.tvDetailStatus);
+        ImageView ivAttachment = view.findViewById(R.id.ivDetailAttachment);
 
         if (task != null) {
             tvTitle.setText(task.getTitle());
@@ -67,6 +70,16 @@ public class TaskDetailFragment extends Fragment {
             tvDeadline.setText(task.getDeadline());
             tvPriority.setText(task.getPriority());
             tvStatus.setText(task.isCompleted() ? "Completed" : "Pending");
+
+            String img = task.getImagePath();
+            if (img != null && !img.isEmpty()) {
+                ImageStorageHelper storage = new ImageStorageHelper(requireContext());
+                Bitmap bm = storage.loadBitmapForView(img, 1024, 1024);
+                if (bm != null) {
+                    ivAttachment.setImageBitmap(bm);
+                    ivAttachment.setVisibility(View.VISIBLE);
+                }
+            }
         }
 
         toolbar.setNavigationOnClickListener(v -> sendResultAndClose());

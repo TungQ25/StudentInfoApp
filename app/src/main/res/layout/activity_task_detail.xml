@@ -85,6 +85,16 @@
             android:textColor="@android:color/white"
             android:textSize="18sp" />
 
+        <ImageView
+            android:id="@+id/ivAttachment"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="16dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/task_attachment_label"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
         <Button
             android:id="@+id/btnEdit"
             android:layout_width="match_parent"
