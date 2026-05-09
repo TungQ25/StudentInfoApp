@@ -34,12 +34,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityLifecycle";
 
     RecyclerView rvTasks, rvCategories;
-    Button btnAddTask, btnDeleteSelected, btnSettings;
+    Button btnAddTask, btnDeleteSelected, btnSettings, btnImageStorage;
     View fragmentContainer, detailScrim;
     TaskAdapter taskAdapter;
     CategoryAdapter categoryAdapter;
     TaskViewModel taskViewModel;
     PreferenceHelper preferenceHelper;
+    ImageStorageHelper imageStorage;
     String appliedTheme;
 
     ActivityResultLauncher<Intent> addTaskLauncher;
@@ -62,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         rvCategories = findViewById(R.id.rvCategories);
         btnAddTask = findViewById(R.id.btnAddTask);
         btnSettings = findViewById(R.id.btnSettings);
+        btnImageStorage = findViewById(R.id.btnImageStorage);
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
         fragmentContainer = findViewById(R.id.fragment_container);
         detailScrim = findViewById(R.id.detail_scrim); 
@@ -70,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
 
         preferenceHelper = new PreferenceHelper(this);
+        imageStorage = new ImageStorageHelper(this);
         appliedTheme = preferenceHelper.getTheme();
 
         setupRecyclerViews();
@@ -95,6 +98,10 @@ public class MainActivity extends AppCompatActivity {
         });
         btnSettings.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
+        });
+        btnImageStorage.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, ImageStorageActivity.class);
             startActivity(intent);
         });
 
@@ -143,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
                 Task task = taskAdapter.getCurrentList().get(position);
-                taskViewModel.delete(task.getId());
+                deleteTaskAndImage(task);
                 Toast.makeText(MainActivity.this, "Task deleted", Toast.LENGTH_SHORT).show();
             }
         }).attachToRecyclerView(rvTasks);
@@ -167,10 +174,29 @@ public class MainActivity extends AppCompatActivity {
         List<Task> currentList = taskAdapter.getCurrentList();
         for (Task t : currentList) {
             if (t.isSelected()) {
-                taskViewModel.delete(t.getId());
+                deleteTaskAndImage(t);
             }
         }
         btnDeleteSelected.setVisibility(View.GONE);
+    }
+
+    // Xóa task và bất kỳ file ảnh (nếu có) được gắn với task đó.
+    private void deleteTaskAndImage(Task task) {
+        if (task == null) return;
+        String img = task.getImagePath();
+        if (img != null && !img.isEmpty()) {
+            imageStorage.deleteImage(img);
+        }
+        taskViewModel.delete(task.getId());
+    }
+
+    // Tìm task theo ID
+    private Task findTaskById(String taskId) {
+        if (taskId == null) return null;
+        for (Task t : taskAdapter.getCurrentList()) {
+            if (taskId.equals(t.getId())) return t;
+        }
+        return null;
     }
 
     private void showTaskDetail(Task task) {
@@ -200,6 +226,7 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra("deadline", task.getDeadline());
         intent.putExtra("completed", task.isCompleted());
         intent.putExtra("position", position);
+        intent.putExtra(AddTaskActivity.EXTRA_IMAGE_PATH, task.getImagePath());
         detailTaskLauncher.launch(intent);
     }
 
@@ -258,6 +285,7 @@ public class MainActivity extends AppCompatActivity {
                         data.getBooleanExtra("completed", false),
                         data.getStringExtra("priority")
                 );
+                task.setImagePath(data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH));
                 taskViewModel.insert(task);
             }
         });
@@ -271,11 +299,30 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (data.getBooleanExtra("deleted", false)) {
-                    taskViewModel.delete(taskId);
+                    Task existing = findTaskById(taskId);
+                    if (existing != null) {
+                        deleteTaskAndImage(existing);
+                    } else {
+                        // Fallback: TaskDetailActivity gửi imagePath qua intent.
+                        String img = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
+                        if (img != null) imageStorage.deleteImage(img);
+                        taskViewModel.delete(taskId);
+                    }
                     return;
                 }
 
                 if (data.getBooleanExtra("updated", false)) {
+                    String newImagePath = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
+
+                    // Nếu ảnh đã thay đổi -> xóa file cũ để tránh orphan
+                    Task existing = findTaskById(taskId);
+                    if (existing != null) {
+                        String oldImagePath = existing.getImagePath();
+                        if (oldImagePath != null && !oldImagePath.equals(newImagePath)) {
+                            imageStorage.deleteImage(oldImagePath);
+                        }
+                    }
+
                     Task updatedTask = new Task(
                             taskId,
                             data.getStringExtra("title"),
@@ -285,6 +332,7 @@ public class MainActivity extends AppCompatActivity {
                             data.getBooleanExtra("completed", false),
                             data.getStringExtra("priority")
                     );
+                    updatedTask.setImagePath(newImagePath);
                     taskViewModel.update(updatedTask);
                 }
             }

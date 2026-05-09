@@ -1,8 +1,11 @@
 package com.example.studentinfoapp;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
@@ -16,12 +19,15 @@ import androidx.core.view.WindowInsetsCompat;
 public class TaskDetailActivity extends AppCompatActivity {
 
     TextView tvTitle, tvDescription, tvCategory, tvPriority, tvDeadline, tvStatus;
+    ImageView ivAttachment;
     Button btnEdit, btnDelete;
 
     String id, title, description, category, priority, deadline;
+    String imagePath;
     boolean isCompleted;
     int position;
     ActivityResultLauncher<Intent> editLauncher;
+    ImageStorageHelper storage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,12 +40,15 @@ public class TaskDetailActivity extends AppCompatActivity {
             return insets;
         });
 
+        storage = new ImageStorageHelper(this);
+
         tvTitle = findViewById(R.id.tvTitle);
         tvDescription = findViewById(R.id.tvDescription);
         tvCategory = findViewById(R.id.tvCategory);
         tvPriority = findViewById(R.id.tvPriority);
         tvDeadline = findViewById(R.id.tvDeadline);
         tvStatus = findViewById(R.id.tvStatus);
+        ivAttachment = findViewById(R.id.ivAttachment);
         btnEdit = findViewById(R.id.btnEdit);
         btnDelete = findViewById(R.id.btnDelete);
 
@@ -52,6 +61,7 @@ public class TaskDetailActivity extends AppCompatActivity {
         deadline = intent.getStringExtra("deadline");
         isCompleted = intent.getBooleanExtra("completed", false);
         position = intent.getIntExtra("position", -1);
+        imagePath = intent.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
 
         updateUI();
 
@@ -67,6 +77,12 @@ public class TaskDetailActivity extends AppCompatActivity {
                         priority = data.getStringExtra("priority");
                         deadline = data.getStringExtra("deadline");
                         isCompleted = data.getBooleanExtra("completed", false);
+                        String newImagePath = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
+
+                        if (imagePath != null && !imagePath.equals(newImagePath)) {
+                            storage.deleteImage(imagePath);
+                        }
+                        imagePath = newImagePath;
 
                         updateUI();
 
@@ -79,6 +95,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                         resultIntent.putExtra("deadline", deadline);
                         resultIntent.putExtra("completed", isCompleted);
                         resultIntent.putExtra("position", position);
+                        resultIntent.putExtra(AddTaskActivity.EXTRA_IMAGE_PATH, imagePath);
                         resultIntent.putExtra("updated", true);
                         setResult(RESULT_OK, resultIntent);
                         finish();
@@ -97,6 +114,7 @@ public class TaskDetailActivity extends AppCompatActivity {
             editIntent.putExtra("completed", isCompleted);
             editIntent.putExtra("position", position);
             editIntent.putExtra("isEdit", true);
+            editIntent.putExtra(AddTaskActivity.EXTRA_IMAGE_PATH, imagePath);
             editLauncher.launch(editIntent);
         });
 
@@ -104,6 +122,7 @@ public class TaskDetailActivity extends AppCompatActivity {
             Intent resultIntent = new Intent();
             resultIntent.putExtra("id", id);
             resultIntent.putExtra("deleted", true);
+            resultIntent.putExtra(AddTaskActivity.EXTRA_IMAGE_PATH, imagePath);
             setResult(RESULT_OK, resultIntent);
             finish();
         });
@@ -116,5 +135,18 @@ public class TaskDetailActivity extends AppCompatActivity {
         tvPriority.setText("Priority: " + priority);
         tvDeadline.setText("Deadline: " + deadline);
         tvStatus.setText("Status: " + (isCompleted ? "Completed" : "Pending"));
+
+        if (imagePath != null && !imagePath.isEmpty()) {
+            Bitmap bm = storage.loadBitmapForView(imagePath, 1024, 1024);
+            if (bm != null) {
+                ivAttachment.setImageBitmap(bm);
+                ivAttachment.setVisibility(View.VISIBLE);
+            } else {
+                ivAttachment.setVisibility(View.GONE);
+            }
+        } else {
+            ivAttachment.setImageDrawable(null);
+            ivAttachment.setVisibility(View.GONE);
+        }
     }
 }
