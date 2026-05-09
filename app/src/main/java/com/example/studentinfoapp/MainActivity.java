@@ -1,6 +1,7 @@
 package com.example.studentinfoapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.graphics.Rect;
@@ -14,6 +15,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -21,6 +23,8 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.color.DynamicColors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,17 +34,20 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityLifecycle";
 
     RecyclerView rvTasks, rvCategories;
-    Button btnAddTask, btnDeleteSelected;
+    Button btnAddTask, btnDeleteSelected, btnSettings;
     View fragmentContainer, detailScrim;
     TaskAdapter taskAdapter;
     CategoryAdapter categoryAdapter;
     TaskViewModel taskViewModel;
+    PreferenceHelper preferenceHelper;
+    String appliedTheme;
 
     ActivityResultLauncher<Intent> addTaskLauncher;
     ActivityResultLauncher<Intent> detailTaskLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        applySavedThemeMode();
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate: Activity Created");
         EdgeToEdge.enable(this);
@@ -54,12 +61,16 @@ public class MainActivity extends AppCompatActivity {
         rvTasks = findViewById(R.id.rvTasks);
         rvCategories = findViewById(R.id.rvCategories);
         btnAddTask = findViewById(R.id.btnAddTask);
+        btnSettings = findViewById(R.id.btnSettings);
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
         fragmentContainer = findViewById(R.id.fragment_container);
         detailScrim = findViewById(R.id.detail_scrim); 
 
         // Initialize ViewModel - đảm bảo dữ liệu được giữ nguyên khi xoay màn hình
         taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
+
+        preferenceHelper = new PreferenceHelper(this);
+        appliedTheme = preferenceHelper.getTheme();
 
         setupRecyclerViews();
         setupLaunchers();
@@ -81,6 +92,10 @@ public class MainActivity extends AppCompatActivity {
         btnAddTask.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
             addTaskLauncher.launch(intent);
+        });
+        btnSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
         });
 
         btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
@@ -206,6 +221,29 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String latestTheme = preferenceHelper.getTheme();
+        if (!latestTheme.equals(appliedTheme)) {
+            appliedTheme = latestTheme;
+            applySavedThemeMode();
+            recreate();
+        }
+    }
+
+    private void applySavedThemeMode() {
+        SharedPreferences preferences = getSharedPreferences(PreferenceHelper.PREF_NAME, MODE_PRIVATE);
+        String theme = preferences.getString(PreferenceHelper.KEY_THEME, PreferenceHelper.THEME_SYSTEM);
+        if (PreferenceHelper.THEME_LIGHT.equals(theme)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if (PreferenceHelper.THEME_DARK.equals(theme)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
     }
 
     private void setupLaunchers() {
