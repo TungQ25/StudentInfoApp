@@ -199,10 +199,14 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    private boolean isTwoPane() {
+        return getResources().getConfiguration().smallestScreenWidthDp >= 600;
+    }
+
     private void showTaskDetail(Task task) {
         TaskDetailFragment fragment = TaskDetailFragment.newInstance(task);
         fragmentContainer.setVisibility(View.VISIBLE);
-        detailScrim.setVisibility(View.VISIBLE);
+        detailScrim.setVisibility(isTwoPane() ? View.GONE : View.VISIBLE);
         getSupportFragmentManager().beginTransaction()
                 // Animation khi mở/đóng TaskDetailFragment
 //                .setCustomAnimations(
@@ -233,11 +237,18 @@ public class MainActivity extends AppCompatActivity {
     private void updateDetailOverlayVisibility() {
         boolean hasDetail = getSupportFragmentManager().getBackStackEntryCount() > 0;
         fragmentContainer.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
-        detailScrim.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+        if (isTwoPane()) {
+            detailScrim.setVisibility(View.GONE);
+        } else {
+            detailScrim.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (isTwoPane()) {
+            return super.dispatchTouchEvent(ev);
+        }
         if (ev.getAction() == MotionEvent.ACTION_DOWN && getSupportFragmentManager().getBackStackEntryCount() > 0) {
             Rect detailBounds = new Rect();
             fragmentContainer.getGlobalVisibleRect(detailBounds);
