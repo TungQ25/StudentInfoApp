@@ -1,18 +1,22 @@
 package com.example.studentinfoapp;
 
+import android.app.Application;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 
 import java.util.List;
 
-public class TaskViewModel extends ViewModel {
+public class TaskViewModel extends AndroidViewModel {
     private final TaskRepository repository;
     private final MutableLiveData<List<Task>> taskListLiveData = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
 
-    public TaskViewModel() {
-        this.repository = TaskRepository.getInstance();
+    public TaskViewModel(@NonNull Application application) {
+        super(application);
+        this.repository = TaskRepository.getInstance(application);
         refreshTasks();
     }
 

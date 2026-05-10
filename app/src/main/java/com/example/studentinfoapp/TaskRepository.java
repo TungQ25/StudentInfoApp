@@ -1,50 +1,55 @@
 package com.example.studentinfoapp;
 
+import android.content.Context;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class TaskRepository {
     private static TaskRepository instance;
-    private final List<Task> taskList;
+    private final TaskDao dao;
 
-    private TaskRepository() {
-        taskList = new ArrayList<>();
+    private TaskRepository(Context appContext) {
+        TaskDbHelper helper = new TaskDbHelper(appContext.getApplicationContext());
+        this.dao = new TaskDao(helper);
     }
 
-    public static synchronized TaskRepository getInstance() {
+    /**
+     * Khởi tạo lần đầu cần {@link Context} (nên dùng application context).
+     */
+    public static synchronized TaskRepository getInstance(Context context) {
         if (instance == null) {
-            instance = new TaskRepository();
+            instance = new TaskRepository(context.getApplicationContext());
         }
         return instance;
     }
 
     public void addTask(Task task) {
-        taskList.add(task);
+        dao.insertTask(task);
     }
 
-    // Read (All)
     public List<Task> getAllTasks() {
-        return new ArrayList<>(taskList);
+        return new ArrayList<>(dao.getAllTasks());
     }
 
-    // Read (By ID)
     public Optional<Task> getTaskById(String id) {
-        return taskList.stream()
-                .filter(task -> task.getId().equals(id))
-                .findFirst();
+        if (id == null) {
+            return Optional.empty();
+        }
+        for (Task task : dao.getAllTasks()) {
+            if (id.equals(task.getId())) {
+                return Optional.of(task);
+            }
+        }
+        return Optional.empty();
     }
 
     public void updateTask(Task updatedTask) {
-        for (int i = 0; i < taskList.size(); i++) {
-            if (taskList.get(i).getId().equals(updatedTask.getId())) {
-                taskList.set(i, updatedTask);
-                return;
-            }
-        }
+        dao.updateTask(updatedTask);
     }
 
     public void deleteTask(String id) {
-        taskList.removeIf(task -> task.getId().equals(id));
+        dao.deleteTask(id);
     }
 }
