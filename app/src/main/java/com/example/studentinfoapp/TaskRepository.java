@@ -11,8 +11,8 @@ public class TaskRepository {
     private final TaskDao dao;
 
     private TaskRepository(Context appContext) {
-        TaskDbHelper helper = new TaskDbHelper(appContext.getApplicationContext());
-        this.dao = new TaskDao(helper);
+        AppDatabase db = AppDatabase.getInstance(appContext.getApplicationContext());
+        this.dao = db.taskDao();
     }
 
     /**
@@ -26,7 +26,7 @@ public class TaskRepository {
     }
 
     public void addTask(Task task) {
-        dao.insertTask(task);
+        dao.insert(task);
     }
 
     public List<Task> getAllTasks() {
@@ -37,19 +37,14 @@ public class TaskRepository {
         if (id == null) {
             return Optional.empty();
         }
-        for (Task task : dao.getAllTasks()) {
-            if (id.equals(task.getId())) {
-                return Optional.of(task);
-            }
-        }
-        return Optional.empty();
+        return Optional.ofNullable(dao.getTaskById(id));
     }
 
     public void updateTask(Task updatedTask) {
-        dao.updateTask(updatedTask);
+        dao.update(updatedTask);
     }
 
     public void deleteTask(String id) {
-        dao.deleteTask(id);
+        dao.deleteById(id);
     }
 }
