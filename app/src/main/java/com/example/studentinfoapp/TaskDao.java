@@ -1,100 +1,41 @@
 package com.example.studentinfoapp;
 
-import android.content.ContentValues;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import androidx.room.Dao;
+import androidx.room.Delete;
+import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
+import androidx.room.Query;
+import androidx.room.Update;
 
-import androidx.annotation.NonNull;
-
-import java.util.ArrayList;
 import java.util.List;
 
-/**
- * CRUD bảng {@link TaskDbHelper#TABLE_TASKS} dùng {@link ContentValues} và {@link Cursor}.
- */
-public class TaskDao {
+@Dao
+public interface TaskDao {
 
-    private final TaskDbHelper helper;
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    long insert(Task task);
 
-    public TaskDao(@NonNull TaskDbHelper helper) {
-        this.helper = helper;
-    }
+    @Update
+    int update(Task task);
 
-    /** @return row ID của dòng mới, hoặc -1 nếu lỗi */
-    public long insertTask(@NonNull Task task) {
-        SQLiteDatabase db = helper.getWritableDatabase();
-        ContentValues values = taskToContentValues(task);
-        return db.insert(TaskDbHelper.TABLE_TASKS, null, values);
-    }
+    @Delete
+    int delete(Task task);
 
-    /** @return số dòng bị ảnh hưởng */
-    public int updateTask(@NonNull Task task) {
-        SQLiteDatabase db = helper.getWritableDatabase();
-        ContentValues values = taskToContentValues(task);
-        return db.update(
-                TaskDbHelper.TABLE_TASKS,
-                values,
-                TaskDbHelper.COL_ID + " = ?",
-                new String[]{task.getId()});
-    }
+    @Query("DELETE FROM tasks WHERE id = :taskId")
+    int deleteById(String taskId);
 
-    /** @return số dòng đã xóa */
-    public int deleteTask(@NonNull String taskId) {
-        SQLiteDatabase db = helper.getWritableDatabase();
-        return db.delete(
-                TaskDbHelper.TABLE_TASKS,
-                TaskDbHelper.COL_ID + " = ?",
-                new String[]{taskId});
-    }
+    @Query("SELECT * FROM tasks ORDER BY deadline ASC")
+    List<Task> getAllTasks();
 
-    @NonNull
-    public List<Task> getAllTasks() {
-        List<Task> out = new ArrayList<>();
-        SQLiteDatabase db = helper.getReadableDatabase();
-        try (Cursor c = db.query(
-                TaskDbHelper.TABLE_TASKS,
-                null,
-                null,
-                null,
-                null,
-                null,
-                TaskDbHelper.COL_DEADLINE + " ASC")) {
-            while (c.moveToNext()) {
-                out.add(cursorToTask(c));
-            }
-        }
-        return out;
-    }
+    @Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
+    Task getTaskById(String taskId);
 
-    @NonNull
-    private static ContentValues taskToContentValues(@NonNull Task task) {
-        ContentValues v = new ContentValues();
-        v.put(TaskDbHelper.COL_ID, task.getId());
-        v.put(TaskDbHelper.COL_TITLE, task.getTitle());
-        v.put(TaskDbHelper.COL_DESCRIPTION, task.getDescription());
-        v.put(TaskDbHelper.COL_CATEGORY, task.getCategory());
-        v.put(TaskDbHelper.COL_DEADLINE, task.getDeadline());
-        v.put(TaskDbHelper.COL_COMPLETED, task.isCompleted() ? 1 : 0);
-        v.put(TaskDbHelper.COL_PRIORITY, task.getPriority());
-        v.put(TaskDbHelper.COL_IMAGE_PATH, task.getImagePath());
-        return v;
-    }
+    @Query("SELECT * FROM tasks WHERE category = :category ORDER BY deadline ASC")
+    List<Task> getTasksByCategory(String category);
 
-    @NonNull
-    private static Task cursorToTask(@NonNull Cursor c) {
-        String id = c.getString(c.getColumnIndexOrThrow(TaskDbHelper.COL_ID));
-        String title = c.getString(c.getColumnIndexOrThrow(TaskDbHelper.COL_TITLE));
-        String description = c.getString(c.getColumnIndexOrThrow(TaskDbHelper.COL_DESCRIPTION));
-        String category = c.getString(c.getColumnIndexOrThrow(TaskDbHelper.COL_CATEGORY));
-        String deadline = c.getString(c.getColumnIndexOrThrow(TaskDbHelper.COL_DEADLINE));
-        boolean completed = c.getInt(c.getColumnIndexOrThrow(TaskDbHelper.COL_COMPLETED)) != 0;
-        String priority = c.getString(c.getColumnIndexOrThrow(TaskDbHelper.COL_PRIORITY));
+    @Query("SELECT * FROM tasks WHERE is_completed = :completed ORDER BY deadline ASC")
+    List<Task> getTasksByCompleted(boolean completed);
 
-        Task task = new Task(id, title, description, category, deadline, completed, priority);
-        int imgIdx = c.getColumnIndex(TaskDbHelper.COL_IMAGE_PATH);
-        if (imgIdx >= 0 && !c.isNull(imgIdx)) {
-            task.setImagePath(c.getString(imgIdx));
-        }
-        return task;
-    }
+    @Query("SELECT * FROM tasks WHERE title LIKE '%' || :keyword || '%' ORDER BY deadline ASC")
+    List<Task> searchByTitle(String keyword);
 }

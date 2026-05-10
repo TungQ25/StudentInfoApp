@@ -17,20 +17,20 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Kiểm tra insert / select ({@link TaskDao#getAllTasks}) / update / delete.
+ * Kiểm tra insert / select ({@link LegacyTaskDao#getAllTasks}) / update / delete.
  * Sau khi chạy app thật, mở App Inspection → Database Inspector để xem bảng {@code tasks}
  * trong {@link TaskDbHelper#DATABASE_NAME}.
  */
 @RunWith(AndroidJUnit4.class)
 public class TaskDaoInstrumentedTest {
 
-    private TaskDao dao;
+    private LegacyTaskDao dao;
 
     @Before
     public void setUp() {
         Context ctx = InstrumentationRegistry.getInstrumentation().getTargetContext();
         ctx.deleteDatabase(TaskDbHelper.DATABASE_NAME);
-        dao = new TaskDao(new TaskDbHelper(ctx));
+        dao = new LegacyTaskDao(new TaskDbHelper(ctx));
     }
 
     @Test
