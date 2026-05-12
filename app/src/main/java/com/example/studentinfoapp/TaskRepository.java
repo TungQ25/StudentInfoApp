@@ -2,13 +2,18 @@ package com.example.studentinfoapp;
 
 import android.content.Context;
 
+import androidx.lifecycle.LiveData;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TaskRepository {
     private static TaskRepository instance;
     private final TaskDao dao;
+    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
 
     private TaskRepository(Context appContext) {
         AppDatabase db = AppDatabase.getInstance(appContext.getApplicationContext());
@@ -25,14 +30,27 @@ public class TaskRepository {
         return instance;
     }
 
-    public void addTask(Task task) {
-        dao.insert(task);
+    /**
+     * Luồng quan sát danh sách task; Room tự chạy truy vấn nền và phát giá trị mới khi DB đổi.
+     */
+    public LiveData<List<Task>> getAllTasksLive() {
+        return dao.getAllTasksLive();
     }
 
+    public void addTask(Task task) {
+        ioExecutor.execute(() -> dao.insert(task));
+    }
+
+    /**
+     * Chỉ gọi trên luồng nền (ví dụ từ {@link #ioExecutor} hoặc test).
+     */
     public List<Task> getAllTasks() {
         return new ArrayList<>(dao.getAllTasks());
     }
 
+    /**
+     * Chỉ gọi trên luồng nền.
+     */
     public Optional<Task> getTaskById(String id) {
         if (id == null) {
             return Optional.empty();
@@ -41,10 +59,10 @@ public class TaskRepository {
     }
 
     public void updateTask(Task updatedTask) {
-        dao.update(updatedTask);
+        ioExecutor.execute(() -> dao.update(updatedTask));
     }
 
     public void deleteTask(String id) {
-        dao.deleteById(id);
+        ioExecutor.execute(() -> dao.deleteById(id));
     }
 }

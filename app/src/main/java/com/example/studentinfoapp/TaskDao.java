@@ -6,6 +6,7 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
+import androidx.lifecycle.LiveData;
 
 import java.util.List;
 
@@ -26,6 +27,9 @@ public interface TaskDao {
 
     @Query("SELECT * FROM tasks ORDER BY deadline ASC")
     List<Task> getAllTasks();
+
+    @Query("SELECT * FROM tasks ORDER BY deadline ASC")
+    LiveData<List<Task>> getAllTasksLive();
 
     @Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
     Task getTaskById(String taskId);

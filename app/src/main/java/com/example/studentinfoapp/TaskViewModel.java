@@ -5,51 +5,45 @@ import android.app.Application;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import java.util.List;
 
 public class TaskViewModel extends AndroidViewModel {
     private final TaskRepository repository;
-    private final MutableLiveData<List<Task>> taskListLiveData = new MutableLiveData<>();
-    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    /** Danh sách task cho UI; đồng bộ từ Room qua {@link TaskRepository#getAllTasksLive()}. */
+    private final MutableLiveData<List<Task>> tasks;
 
     public TaskViewModel(@NonNull Application application) {
         super(application);
         this.repository = TaskRepository.getInstance(application);
-        refreshTasks();
+        MediatorLiveData<List<Task>> mediator = new MediatorLiveData<>();
+        mediator.addSource(repository.getAllTasksLive(), mediator::setValue);
+        this.tasks = mediator;
     }
 
     public LiveData<List<Task>> getTasks() {
-        return taskListLiveData;
+        return tasks;
     }
 
-    public LiveData<Boolean> getIsLoading() {
-        return isLoading;
+    /**
+     * Với Room {@code LiveData}, dữ liệu đã được tải và tự làm mới khi có thay đổi;
+     * giữ API này theo yêu cầu bài tập (có thể gọi sau khi observe nếu cần mở rộng sau).
+     */
+    public void loadTasks() {
+        // Không cần thao tác: nguồn repository.getAllTasksLive() đã nối trong constructor.
     }
 
-    public void insert(Task task) {
-        isLoading.setValue(true);
+    public void addTask(Task task) {
         repository.addTask(task);
-        refreshTasks();
-        isLoading.setValue(false);
     }
 
-    public void update(Task task) {
-        isLoading.setValue(true);
+    public void updateTask(Task task) {
         repository.updateTask(task);
-        refreshTasks();
-        isLoading.setValue(false);
     }
 
-    public void delete(String id) {
-        isLoading.setValue(true);
+    public void deleteTask(String id) {
         repository.deleteTask(id);
-        refreshTasks();
-        isLoading.setValue(false);
-    }
-
-    private void refreshTasks() {
-        taskListLiveData.setValue(repository.getAllTasks());
     }
 }

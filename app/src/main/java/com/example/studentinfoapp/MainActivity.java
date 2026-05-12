@@ -80,7 +80,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Observe tasks from ViewModel - UI tự động cập nhật khi dữ liệu thay đổi (ví dụ: khi thêm, xóa, sửa)
         taskViewModel.getTasks().observe(this, tasks -> {
-            taskAdapter.submitList(new ArrayList<>(tasks));
+            if (tasks != null) {
+                taskAdapter.submitList(new ArrayList<>(tasks));
+            }
         });
 
         // Lắng nghe kết quả trả về từ TaskDetailFragment (Fragment Result API)
@@ -133,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStatusChanged(Task task, boolean isCompleted) {
                 task.setCompleted(isCompleted);
-                taskViewModel.update(task);
+                taskViewModel.updateTask(task);
             }
         });
         rvTasks.setLayoutManager(new LinearLayoutManager(this));
@@ -187,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
         if (img != null && !img.isEmpty()) {
             imageStorage.deleteImage(img);
         }
-        taskViewModel.delete(task.getId());
+        taskViewModel.deleteTask(task.getId());
     }
 
     // Tìm task theo ID
@@ -297,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
                         data.getStringExtra("priority")
                 );
                 task.setImagePath(data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH));
-                taskViewModel.insert(task);
+                taskViewModel.addTask(task);
             }
         });
 
@@ -317,7 +319,7 @@ public class MainActivity extends AppCompatActivity {
                         // Fallback: TaskDetailActivity gửi imagePath qua intent.
                         String img = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
                         if (img != null) imageStorage.deleteImage(img);
-                        taskViewModel.delete(taskId);
+                        taskViewModel.deleteTask(taskId);
                     }
                     return;
                 }
@@ -344,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
                             data.getStringExtra("priority")
                     );
                     updatedTask.setImagePath(newImagePath);
-                    taskViewModel.update(updatedTask);
+                    taskViewModel.updateTask(updatedTask);
                 }
             }
         });

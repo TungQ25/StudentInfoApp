@@ -38,6 +38,8 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+    implementation(libs.lifecycleViewmodel)
+    implementation(libs.lifecycleLivedata)
     implementation(libs.roomRuntime)
     annotationProcessor(libs.roomCompiler)
     testImplementation(libs.junit)
