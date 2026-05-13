@@ -3,11 +3,6 @@ package com.example.studentinfoapp;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Paint;
-import android.graphics.Shader;
 import android.net.Uri;
 import android.util.Log;
 
@@ -188,54 +183,5 @@ public class ImageStorageHelper {
     public long getFileSize(String filename) {
         File file = getFile(filename);
         return file.exists() ? file.length() : 0L;
-    }
-
-    /** Định dạng bytes -> chuỗi đọc được (B / KB / MB). */
-    public static String formatSize(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        double kb = bytes / 1024.0;
-        if (kb < 1024) return String.format(java.util.Locale.US, "%.2f KB", kb);
-        double mb = kb / 1024.0;
-        return String.format(java.util.Locale.US, "%.2f MB", mb);
-    }
-
-
-    // -------- Helpers used for test tasks --------
-
-    /** Create Bitmap of solid color (or any color) size width x height. */
-    public static Bitmap createSolidColorBitmap(int width, int height, int color) {
-        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        bitmap.eraseColor(color);
-        return bitmap;
-    }
-
-    public static Bitmap createRedBitmap(int width, int height) {
-        return createSolidColorBitmap(width, height, Color.RED);
-    }
-
-    /**
-     * Create Bitmap with gradient + checker pattern to simulate "real" image
-     * (solid color image will be compressed very small, not reflecting the actual case).
-     */
-    public static Bitmap createSampleBitmap(int width, int height) {
-        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setShader(new LinearGradient(
-                0, 0, width, height,
-                new int[]{Color.RED, Color.YELLOW, Color.GREEN, Color.BLUE, Color.MAGENTA},
-                null,
-                Shader.TileMode.CLAMP));
-        canvas.drawRect(0, 0, width, height, paint);
-
-        Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
-        int step = Math.max(20, width / 40);
-        for (int y = 0; y < height; y += step) {
-            for (int x = 0; x < width; x += step) {
-                dot.setColor(((x / step + y / step) & 1) == 0 ? Color.WHITE : Color.BLACK);
-                canvas.drawCircle(x, y, step * 0.3f, dot);
-            }
-        }
-        return bitmap;
     }
 }

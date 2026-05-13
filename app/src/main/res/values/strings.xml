@@ -14,24 +14,6 @@
     <string name="settings_reset_button">RESET</string>
     <string name="open_settings">Cài đặt</string>
 
-    <!-- Image Storage demo -->
-    <string name="title_image_storage">Internal Storage Demo</string>
-    <string name="open_image_storage">Image Storage Demo</string>
-    <string name="img_no_data">(chưa có dữ liệu)</string>
-    <string name="img_section_1_title">1. Red Bitmap 500×500</string>
-    <string name="img_section_1_desc">Tạo Bitmap màu đỏ, lưu vào Internal Storage, nạp lại và hiển thị.</string>
-    <string name="img_btn_red_bitmap">Generate &amp; Save Red Bitmap</string>
-    <string name="img_section_2_title">2. Pick từ Gallery</string>
-    <string name="img_section_2_desc">Chọn ảnh, lưu thành task_[timestamp].jpg vào Internal Storage.</string>
-    <string name="img_btn_pick">PICK</string>
-    <string name="img_btn_delete">DELETE</string>
-    <string name="img_deleted_fmt">Đã xoá: %1$s</string>
-    <string name="img_section_3_title">3. inSampleSize: 1 vs 4</string>
-    <string name="img_section_3_desc">So sánh kích thước &amp; RAM khi decode 1 ảnh 2000×2000 với inSampleSize khác nhau.</string>
-    <string name="img_btn_sample_size">Run Sample Size Test</string>
-    <string name="img_sample_1_label">inSampleSize = 1</string>
-    <string name="img_sample_4_label">inSampleSize = 4</string>
-
     <!-- Task attachment -->
     <string name="task_attachment_label">Ảnh đính kèm</string>
     <string name="task_attachment_pick">CHỌN ẢNH</string>

@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityLifecycle";
 
     RecyclerView rvTasks, rvCategories;
-    Button btnAddTask, btnDeleteSelected, btnSettings, btnImageStorage;
+    Button btnAddTask, btnDeleteSelected, btnSettings;
     View fragmentContainer, detailScrim;
     TaskAdapter taskAdapter;
     CategoryAdapter categoryAdapter;
@@ -63,7 +63,6 @@ public class MainActivity extends AppCompatActivity {
         rvCategories = findViewById(R.id.rvCategories);
         btnAddTask = findViewById(R.id.btnAddTask);
         btnSettings = findViewById(R.id.btnSettings);
-        btnImageStorage = findViewById(R.id.btnImageStorage);
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
         fragmentContainer = findViewById(R.id.fragment_container);
         detailScrim = findViewById(R.id.detail_scrim); 
@@ -100,10 +99,6 @@ public class MainActivity extends AppCompatActivity {
         });
         btnSettings.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-            startActivity(intent);
-        });
-        btnImageStorage.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, ImageStorageActivity.class);
             startActivity(intent);
         });
 
@@ -351,17 +346,4 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-//    @Override
-//    protected void onStart() { super.onStart(); Log.d(TAG, "onStart"); }
-//    @Override
-//    protected void onResume() { super.onResume(); Log.d(TAG, "onResume"); }
-//    @Override
-//    protected void onPause() { super.onPause(); Log.d(TAG, "onPause"); }
-//    @Override
-//    protected void onStop() { super.onStop(); Log.d(TAG, "onStop"); }
-//    @Override
-//    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "onDestroy"); }
-//    @Override
-//    protected void onRestart() { super.onRestart(); Log.d(TAG, "onRestart"); }
 }
