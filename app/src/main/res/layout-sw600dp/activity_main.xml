@@ -44,29 +44,6 @@
                 android:orientation="vertical"
                 android:padding="@dimen/padding">
 
-                <TextView
-                    android:id="@+id/tvHoTen"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/ho_ten"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/tvMonHoc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/mon_hoc"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/tvGiangVien"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/giang_vien"
-                    android:textSize="15sp" />
-
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvCategories"
                     android:layout_width="match_parent"

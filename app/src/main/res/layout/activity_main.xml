@@ -29,30 +29,9 @@
         android:orientation="vertical"
         android:padding="@dimen/padding"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/appBarLayout">
-
-        <TextView
-            android:id="@+id/tvHoTen"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/ho_ten"
-            android:textSize="15sp" />
-
-        <TextView
-            android:id="@+id/tvMonHoc"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/mon_hoc"
-            android:textSize="15sp" />
-
-        <TextView
-            android:id="@+id/tvGiangVien"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/giang_vien"
-            android:textSize="15sp" />
 
         <!-- Horizontal RecyclerView for Categories -->
         <androidx.recyclerview.widget.RecyclerView
@@ -88,7 +67,7 @@
             android:layout_marginTop="8dp"
             android:text="@string/open_settings" />
 
-        <Button
+       <Button
             android:id="@+id/btnDeleteSelected"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
