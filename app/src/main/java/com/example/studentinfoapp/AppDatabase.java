@@ -9,19 +9,19 @@ import androidx.room.RoomDatabase;
 @Database(entities = {Task.class}, version = 1, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
-    private static final String DB_NAME = TaskDbHelper.DATABASE_NAME;
+    private static final String DB_NAME = TaskContract.DATABASE_NAME;
     private static volatile AppDatabase instance;
 
     public abstract TaskDao taskDao();
 
     public static AppDatabase getInstance(Context context) {
         if (instance == null) {
-            synchronized (AppDatabase.class) {
+            synchronized (AppDatabase.class) { // synchronized để tránh race condition khi nhiều thread cùng truy cập vào database
                 if (instance == null) {
-                    instance = Room.databaseBuilder(
-                                    context.getApplicationContext(),
+                    instance = Room.databaseBuilder( // tạo database
+                            context.getApplicationContext(),
                                     AppDatabase.class,
-                                    DB_NAME)
+                                    DB_NAME) // tên database
                             .build();
                 }
             }
