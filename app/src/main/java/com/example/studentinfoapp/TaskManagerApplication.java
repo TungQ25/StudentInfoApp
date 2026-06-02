@@ -24,14 +24,20 @@ public class TaskManagerApplication extends Application {
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build();
 
-        // Tạo yêu cầu công việc định kỳ mỗi 15 phút
+        /* Tạo yêu cầu công việc định kỳ mỗi 15 phút để đồng bộ dữ liệu từ server
+        Ràng buộc mạng để chỉ chạy khi có kết nối mạng, 
+        Nhận Result.success() nếu đồng bộ thành công, 
+        Result.retry() nếu đồng bộ thất bại và tiếp tục retry,
+        Result.failure() nếu đồng bộ thất bại và không retry.
+        */
         PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(SyncWorker.class, 15, TimeUnit.MINUTES)
                 .setConstraints(constraints) // Thiết lập ràng buộc mạng
                 .build();
 
-        // Enqueue work dạng unique tránh tạo nhiều task sync trùng nhau.
-        // Đăng ký SyncWorker với WorkManager.
-        // WorkManager sẽ tự gọi doWork() khi đến thời điểm phù hợp và thỏa constraints.
+        /* Enqueue work dạng unique tránh tạo nhiều task sync trùng nhau.
+        Đăng ký SyncWorker với WorkManager.
+        WorkManager sẽ tự gọi doWork() khi đến thời điểm phù hợp và thỏa constraints.
+        */
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
                 SyncWorker.UNIQUE_WORK_NAME, // Tên duy nhất cho công việc định kỳ
                 ExistingPeriodicWorkPolicy.UPDATE, // Cập nhật nếu task đã tồn tại tên duy nhất

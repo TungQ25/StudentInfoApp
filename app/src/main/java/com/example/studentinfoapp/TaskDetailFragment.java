@@ -1,5 +1,6 @@
 package com.example.studentinfoapp;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -18,12 +19,17 @@ import com.google.android.material.appbar.MaterialToolbar;
 
 public class TaskDetailFragment extends Fragment {
 
+    public interface OnNavigateToFullDetailListener {
+        void onNavigateToFullDetail(Task task);
+    }
+
     private static final String ARG_TASK = "task";
     public static final String RESULT_KEY = "task_detail_result_key";
     public static final String RESULT_TASK_ID = "result_task_id";
     public static final String RESULT_MESSAGE = "result_message";
     private Task task;
     private boolean hasSentResult = false;
+    private OnNavigateToFullDetailListener navigateListener;
 
     public static TaskDetailFragment newInstance(Task task) {
         TaskDetailFragment fragment = new TaskDetailFragment();
@@ -31,6 +37,22 @@ public class TaskDetailFragment extends Fragment {
         args.putSerializable(ARG_TASK, task);
         fragment.setArguments(args);
         return fragment;
+    }
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        if (context instanceof OnNavigateToFullDetailListener) {
+            navigateListener = (OnNavigateToFullDetailListener) context;
+        } else {
+            navigateListener = null;
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        navigateListener = null;
     }
 
     @Override
@@ -82,7 +104,6 @@ public class TaskDetailFragment extends Fragment {
             }
         }
 
-        toolbar.setNavigationOnClickListener(v -> sendResultAndClose());
         requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
 
             @Override
@@ -91,7 +112,35 @@ public class TaskDetailFragment extends Fragment {
             }
         });
 
+        View.OnClickListener openFullDetail = v -> {
+            if (navigateListener != null && task != null) {
+                navigateListener.onNavigateToFullDetail(task);
+            }
+        };
+        applyOpenDetailClick(view, openFullDetail);
+        toolbar.setNavigationOnClickListener(v -> sendResultAndClose());
+
         return view;
+    }
+
+    /** Gắn listener mở TaskDetailActivity cho toàn bộ fragment (trừ ScrollView — tránh chặn cuộn). */
+    private void applyOpenDetailClick(View view, View.OnClickListener listener) {
+        if (view instanceof android.widget.ScrollView) {
+            view.setOnClickListener(listener);
+            ViewGroup scroll = (ViewGroup) view;
+            for (int i = 0; i < scroll.getChildCount(); i++) {
+                applyOpenDetailClick(scroll.getChildAt(i), listener);
+            }
+            return;
+        }
+        view.setClickable(true);
+        view.setOnClickListener(listener);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                applyOpenDetailClick(group.getChildAt(i), listener);
+            }
+        }
     }
 
     private void sendResultAndClose() {

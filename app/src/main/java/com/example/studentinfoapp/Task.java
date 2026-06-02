@@ -6,44 +6,64 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
-@Entity(tableName = TaskDbHelper.TABLE_TASKS)
+@Entity(tableName = TaskContract.TABLE_TASKS)
 public class Task implements Serializable {
 
     @PrimaryKey
     @NonNull
-    @ColumnInfo(name = TaskDbHelper.COL_ID)
+    @SerializedName("id")
+    @ColumnInfo(name = TaskContract.COL_ID)
     private String id;
 
     @NonNull
-    @ColumnInfo(name = TaskDbHelper.COL_TITLE)
+    @SerializedName("title")
+    @ColumnInfo(name = TaskContract.COL_TITLE)
     private String title;
 
-    @ColumnInfo(name = TaskDbHelper.COL_DESCRIPTION)
+    @SerializedName("description")
+    @ColumnInfo(name = TaskContract.COL_DESCRIPTION)
     private String description;
 
-    @ColumnInfo(name = TaskDbHelper.COL_CATEGORY)
+    @ColumnInfo(name = TaskContract.COL_CATEGORY)
     private String category;
 
-    @ColumnInfo(name = TaskDbHelper.COL_DEADLINE)
+    @ColumnInfo(name = TaskContract.COL_DEADLINE)
     private String deadline;
 
-    @ColumnInfo(name = TaskDbHelper.COL_COMPLETED)
+    @SerializedName("completed")
+    @ColumnInfo(name = TaskContract.COL_COMPLETED)
     private boolean isCompleted;
 
-    @ColumnInfo(name = TaskDbHelper.COL_PRIORITY)
+    @ColumnInfo(name = TaskContract.COL_PRIORITY)
     private String priority;
 
-    @ColumnInfo(name = TaskDbHelper.COL_IMAGE_PATH)
+    @ColumnInfo(name = TaskContract.COL_IMAGE_PATH)
     private String imagePath;
 
-    /** Trạng thái UI, không lưu trong DB. */
+    @ColumnInfo(name = TaskContract.COL_UPDATED_AT, defaultValue = "0")
+    private long updatedAt;
+
+    @ColumnInfo(name = TaskContract.COL_SYNCED, defaultValue = "1")
+    private boolean synced;
+
+    @ColumnInfo(name = TaskContract.COL_DELETED, defaultValue = "0")
+    private boolean deleted;
+
+    @Ignore
+    @SerializedName("userId")
+    private int userId;
+
+    /** Trang thai UI, khong luu trong DB. */
     @Ignore
     private boolean isSelected;
 
+    /** Tạo task mới không có id. */
     @Ignore
     public Task(
             @NonNull String title,
@@ -53,10 +73,9 @@ public class Task implements Serializable {
             boolean isCompleted,
             String priority) {
         this(UUID.randomUUID().toString(), title, description, category, deadline, isCompleted, priority, null);
-        this.isSelected = false;
     }
 
-    /** Constructor tiện lợi (không truyền imagePath); ủy quyền cho constructor đầy đủ. */
+    /** Tạo task mới có id. */
     @Ignore
     public Task(
             @NonNull String id,
@@ -69,7 +88,8 @@ public class Task implements Serializable {
         this(id, title, description, category, deadline, isCompleted, priority, null);
     }
 
-    /** Constructor đầy đủ các cột DB — Room dùng khi đọc/ghi. */
+    /** Tạo task mới có id và title. */
+    @Ignore
     public Task(
             @NonNull String id,
             @NonNull String title,
@@ -79,6 +99,33 @@ public class Task implements Serializable {
             boolean isCompleted,
             String priority,
             String imagePath) {
+        this(
+                id,
+                title,
+                description,
+                category,
+                deadline,
+                isCompleted,
+                priority,
+                imagePath,
+                System.currentTimeMillis(),
+                false,
+                false);
+    }
+
+    /** Tạo task mới với tất cả các cột DB - Room dùng khi đọc/ghi. */
+    public Task(
+            @NonNull String id,
+            @NonNull String title,
+            String description,
+            String category,
+            String deadline,
+            boolean isCompleted,
+            String priority,
+            String imagePath,
+            long updatedAt,
+            boolean synced,
+            boolean deleted ) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -87,6 +134,9 @@ public class Task implements Serializable {
         this.isCompleted = isCompleted;
         this.priority = priority;
         this.imagePath = imagePath;
+        this.updatedAt = updatedAt;
+        this.synced = synced;
+        this.deleted = deleted;
         this.isSelected = false;
     }
 
@@ -156,6 +206,38 @@ public class Task implements Serializable {
         this.imagePath = imagePath;
     }
 
+    public long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public boolean isSynced() {
+        return synced;
+    }
+
+    public void setSynced(boolean synced) {
+        this.synced = synced;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
     public boolean isSelected() {
         return isSelected;
     }
@@ -164,17 +246,76 @@ public class Task implements Serializable {
         isSelected = selected;
     }
 
+    public void markLocalChange() {
+        updatedAt = System.currentTimeMillis();
+        synced = false;
+        deleted = false;
+    }
+
+    public void markDeletedLocal() {
+        updatedAt = System.currentTimeMillis();
+        synced = false;
+        deleted = true;
+    }
+
+    public static Task fromRemote(Task remote) {
+        String id = remote.getId() == null ? UUID.randomUUID().toString() : remote.getId();
+        String title = remote.getTitle() == null ? "" : remote.getTitle();
+        Task task = new Task(
+                id,
+                title,
+                remote.getDescription(),
+                remote.getCategory() == null ? "All" : remote.getCategory(),
+                remote.getDeadline(),
+                remote.isCompleted(),
+                remote.getPriority() == null ? "Low" : remote.getPriority(),
+                remote.getImagePath(),
+                System.currentTimeMillis(),
+                true,
+                false);
+        task.setUserId(remote.getUserId());
+        return task;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return isCompleted == task.isCompleted && isSelected == task.isSelected &&
-                Objects.equals(id, task.id) && Objects.equals(title, task.title);
+        return isCompleted == task.isCompleted
+                && updatedAt == task.updatedAt
+                && synced == task.synced
+                && deleted == task.deleted
+                && isSelected == task.isSelected
+                && Objects.equals(id, task.id)
+                && Objects.equals(title, task.title)
+                && Objects.equals(description, task.description)
+                && Objects.equals(category, task.category)
+                && Objects.equals(deadline, task.deadline)
+                && Objects.equals(priority, task.priority)
+                && Objects.equals(imagePath, task.imagePath);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, isCompleted, isSelected);
+        return Objects.hash(id, title, description, category, deadline, isCompleted, priority,
+                imagePath, updatedAt, synced, deleted, isSelected);
+    }
+
+    @Override
+    public String toString() {
+        return "Task{" +
+                "id='" + id + '\'' +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                ", category='" + category + '\'' +
+                ", deadline='" + deadline + '\'' +
+                ", isCompleted=" + isCompleted +
+                ", priority='" + priority + '\'' +
+                ", imagePath='" + imagePath + '\'' +
+                ", updatedAt=" + updatedAt +
+                ", synced=" + synced +
+                ", deleted=" + deleted +
+                '}';
     }
 }

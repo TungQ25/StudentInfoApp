@@ -1,7 +1,5 @@
 package com.example.studentinfoapp;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,7 +21,6 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
 
     public interface OnTaskClickListener {
         void onTaskClick(Task task, int position);
-        void onTaskDoubleClick(Task task, int position);
         void onTaskLongClick(Task task, int position);
         void onStatusChanged(Task task, boolean isCompleted);
     }
@@ -61,10 +58,6 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
         CheckBox cbCompleted;
         ImageView ivPriority;
         View root;
-        
-        private long lastClickTime = 0;
-        private final Handler handler = new Handler(Looper.getMainLooper());
-        private Runnable pendingClick;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -88,7 +81,12 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
             cbCompleted.setOnCheckedChangeListener(null);
             cbCompleted.setChecked(task.isCompleted());
             cbCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                listener.onStatusChanged(task, isChecked);
+                int position = getBindingAdapterPosition();
+                if (position != RecyclerView.NO_POSITION) {
+                    Task current = getItem(position);
+                    current.setCompleted(isChecked);
+                    listener.onStatusChanged(current, isChecked);
+                }
             });
 
             if ("High".equals(task.getPriority())) {
@@ -104,29 +102,17 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
             }
 
             root.setOnClickListener(v -> {
-                long currentTime = System.currentTimeMillis();
                 int position = getBindingAdapterPosition();
-                
-                if (currentTime - lastClickTime < 300) {
-                    // Double Click detected: Hủy click đơn đang chờ và chạy double click
-                    if (pendingClick != null) {
-                        handler.removeCallbacks(pendingClick);
-                        pendingClick = null;
-                    }
-                    listener.onTaskDoubleClick(task, position);
-                } else {
-                    // Click đơn: Chờ 300ms xem có click thứ 2 không
-                    pendingClick = () -> {
-                        listener.onTaskClick(task, position);
-                        pendingClick = null;
-                    };
-                    handler.postDelayed(pendingClick, 300);
+                if (position != RecyclerView.NO_POSITION) {
+                    listener.onTaskClick(getItem(position), position);
                 }
-                lastClickTime = currentTime;
             });
 
             root.setOnLongClickListener(v -> {
-                listener.onTaskLongClick(task, getBindingAdapterPosition());
+                int position = getBindingAdapterPosition();
+                if (position != RecyclerView.NO_POSITION) {
+                    listener.onTaskLongClick(getItem(position), position);
+                }
                 return true;
             });
         }

@@ -46,4 +46,8 @@ public class TaskViewModel extends AndroidViewModel {
     public void deleteTask(String id) {
         repository.deleteTask(id);
     }
+
+    public void syncTasks() {
+        repository.syncTasks();
+    }
 }
