@@ -3,6 +3,8 @@ package com.example.studentinfoapp;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.graphics.Rect;
 import android.view.MotionEvent;
@@ -24,13 +26,13 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.color.DynamicColors;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements TaskDetailFragment.OnNavigateToFullDetailListener {
     private static final String TAG = "MainActivityLifecycle";
 
     RecyclerView rvTasks, rvCategories;
@@ -42,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     PreferenceHelper preferenceHelper;
     ImageStorageHelper imageStorage;
     String appliedTheme;
+    ExecutorService executorService;
+    Handler mainHandler;
 
     ActivityResultLauncher<Intent> addTaskLauncher;
     ActivityResultLauncher<Intent> detailTaskLauncher;
@@ -73,9 +77,12 @@ public class MainActivity extends AppCompatActivity {
         preferenceHelper = new PreferenceHelper(this);
         imageStorage = new ImageStorageHelper(this);
         appliedTheme = preferenceHelper.getTheme();
+        mainHandler = new Handler(Looper.getMainLooper()); // tạo một handler để thực hiện các tác vụ trên main thread
+        executorService = Executors.newSingleThreadExecutor(); // tạo một thread để thực hiện các tác vụ
 
-        setupRecyclerViews();
-        setupLaunchers();
+        setupRecyclerViews(); // khởi tạo recycler view để hiển thị danh sách task  
+        setupLaunchers(); // khởi tạo launchers để xử lý kết quả từ các activity
+        taskViewModel.syncTasks(); // đồng bộ dữ liệu từ server
 
         // Observe tasks from ViewModel - UI tự động cập nhật khi dữ liệu thay đổi (ví dụ: khi thêm, xóa, sửa)
         taskViewModel.getTasks().observe(this, tasks -> {
@@ -93,33 +100,34 @@ public class MainActivity extends AppCompatActivity {
         });
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateDetailOverlayVisibility);
 
-        btnAddTask.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
-            addTaskLauncher.launch(intent);
-        });
-        btnSettings.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-            startActivity(intent);
-        });
+        if (btnAddTask != null) {
+            btnAddTask.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
+                addTaskLauncher.launch(intent);
+            });
+        }
+        if (btnSettings != null) {
+            btnSettings.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+                startActivity(intent);
+            });
+        }
 
-        btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
+        if (btnDeleteSelected != null) {
+            btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
+        }
     }
 
     private void setupRecyclerViews() {
         taskAdapter = new TaskAdapter(new TaskAdapter.OnTaskClickListener() {
             @Override
             public void onTaskClick(Task task, int position) {
-                if (btnDeleteSelected.getVisibility() == View.VISIBLE) {
+                if (btnDeleteSelected != null && btnDeleteSelected.getVisibility() == View.VISIBLE) {
                     task.setSelected(!task.isSelected());
                     taskAdapter.notifyItemChanged(position);
                 } else {
                     showTaskDetail(task);
                 }
-            }
-
-            @Override
-            public void onTaskDoubleClick(Task task, int position) {
-                openTaskDetailActivity(task, position);
             }
 
             @Override
@@ -162,7 +170,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void toggleMultiSelectMode(Task task, int position) {
-        btnDeleteSelected.setVisibility(View.VISIBLE);
+        if (btnDeleteSelected != null) {
+            btnDeleteSelected.setVisibility(View.VISIBLE);
+        }
         task.setSelected(true);
         taskAdapter.notifyItemChanged(position);
     }
@@ -174,7 +184,9 @@ public class MainActivity extends AppCompatActivity {
                 deleteTaskAndImage(t);
             }
         }
-        btnDeleteSelected.setVisibility(View.GONE);
+        if (btnDeleteSelected != null) {
+            btnDeleteSelected.setVisibility(View.GONE);
+        }
     }
 
     // Xóa task và bất kỳ file ảnh (nếu có) được gắn với task đó.
@@ -202,8 +214,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void showTaskDetail(Task task) {
         TaskDetailFragment fragment = TaskDetailFragment.newInstance(task);
-        fragmentContainer.setVisibility(View.VISIBLE);
-        detailScrim.setVisibility(isTwoPane() ? View.GONE : View.VISIBLE);
+        if (fragmentContainer != null) fragmentContainer.setVisibility(View.VISIBLE);
+        if (detailScrim != null) detailScrim.setVisibility(isTwoPane() ? View.GONE : View.VISIBLE);
         getSupportFragmentManager().beginTransaction()
                 // Animation khi mở/đóng TaskDetailFragment
 //                .setCustomAnimations(
@@ -215,6 +227,29 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
+    }
+
+    @Override
+    public void onNavigateToFullDetail(Task task) { 
+        if (task == null) {
+            return;
+        }
+        getSupportFragmentManager().popBackStack();
+        int position = findTaskListPosition(task); // tìm vị trí của task trong danh sách
+        openTaskDetailActivity(task, position >= 0 ? position : 0);
+    }
+
+    private int findTaskListPosition(Task task) { // tìm vị trí của task trong danh sách
+        if (task == null || task.getId() == null) {
+            return -1;
+        }
+        List<Task> list = taskAdapter.getCurrentList(); // lấy danh sách task
+        for (int i = 0; i < list.size(); i++) {
+            if (task.getId().equals(list.get(i).getId())) { // kiểm tra xem id của task có trùng với id của task trong danh sách không
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void openTaskDetailActivity(Task task, int position) {
@@ -233,11 +268,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateDetailOverlayVisibility() {
         boolean hasDetail = getSupportFragmentManager().getBackStackEntryCount() > 0;
-        fragmentContainer.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
-        if (isTwoPane()) {
-            detailScrim.setVisibility(View.GONE);
-        } else {
-            detailScrim.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+        if (fragmentContainer != null) fragmentContainer.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+        if (detailScrim != null) {
+            if (isTwoPane()) {
+                detailScrim.setVisibility(View.GONE);
+            } else {
+                detailScrim.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+            }
         }
     }
 
@@ -248,11 +285,13 @@ public class MainActivity extends AppCompatActivity {
         }
         if (ev.getAction() == MotionEvent.ACTION_DOWN && getSupportFragmentManager().getBackStackEntryCount() > 0) {
             Rect detailBounds = new Rect();
-            fragmentContainer.getGlobalVisibleRect(detailBounds);
-            int x = (int) ev.getRawX();
-            int y = (int) ev.getRawY();
-            if (!detailBounds.contains(x, y)) {
-                getSupportFragmentManager().popBackStack();
+            if (fragmentContainer != null) {
+                fragmentContainer.getGlobalVisibleRect(detailBounds);
+                int x = (int) ev.getRawX();
+                int y = (int) ev.getRawY();
+                if (!detailBounds.contains(x, y)) {
+                    getSupportFragmentManager().popBackStack();
+                }
             }
         }
         return super.dispatchTouchEvent(ev);
@@ -267,6 +306,14 @@ public class MainActivity extends AppCompatActivity {
             applySavedThemeMode();
             recreate();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
+        super.onDestroy();
     }
 
     private void applySavedThemeMode() {
@@ -295,6 +342,7 @@ public class MainActivity extends AppCompatActivity {
                 );
                 task.setImagePath(data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH));
                 taskViewModel.addTask(task);
+                taskViewModel.loadTasks();
             }
         });
 
