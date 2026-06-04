@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">TaskManagerApp</string>
+    <string name="title_main">Tasks Manager</string>
+    <string name="title_task_detail">Chi tiết công việc</string>
+    <string name="title_add_task">Thêm công việc</string>
+    <string name="title_settings">Cài đặt</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme_label">Theme:</string>
+    <string name="settings_notifications_label">Notifications:</string>
+    <string name="settings_reset_button">RESET</string>
+    <string name="open_settings">Cài đặt</string>
+
+    <!-- Task attachment -->
+    <string name="task_attachment_label">Ảnh đính kèm</string>
+    <string name="task_attachment_pick">CHỌN ẢNH</string>
+    <string name="task_attachment_remove">XOÁ ẢNH</string>
+    <string name="task_attachment_save_failed">Không lưu được ảnh</string>
+</resources>
