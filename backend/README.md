@@ -11,7 +11,7 @@ Spring Boot REST API for the Android Task Manager app.
 Default config:
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/tasks_manager?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+spring.datasource.url=jdbc:mysql://localhost:3306/tasks_manager_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 spring.datasource.username=root
 spring.datasource.password=
 ```

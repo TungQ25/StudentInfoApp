@@ -1,12 +1,14 @@
 package com.example.taskmanager.controller;
 
 import java.util.List;
+import java.util.UUID;
 
-import com.example.taskmanager.repository.TaskRepository;
 import com.example.taskmanager.entity.Task;
+import com.example.taskmanager.repository.TaskRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,43 +36,108 @@ public class TaskController {
         return repository.findByDeletedFalseOrderByDeadlineAsc();
     }
 
+    @GetMapping("/trash")
+    public List<Task> getTrash() {
+        return repository.findByDeletedTrueOrderByUpdatedAtDesc();
+    }
+
     @GetMapping("/{id}")
     public Task getTaskById(@PathVariable String id) {
         return repository.findById(id)
-                .filter(task -> !task.isDeleted())
+                .filter(task -> !task.isDeleted()) // Đảm bảo task ko trong thùng rác
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
     @PostMapping
     public ResponseEntity<Task> createTask(@Valid @RequestBody Task task) {
+        // Nếu id không tồn tại thì tạo id mới
+        if (task.getId() == null || task.getId().isBlank()) {
+            task.setId(UUID.randomUUID().toString()); 
+        } 
+        // Nếu id tồn tại trong database thì throw exception
+        if (repository.existsById(task.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Task id already exists");
+        } 
+        
         task.setDeleted(false);
-        normalizeUpdatedAt(task);
-        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(task));
+        task.setDeletedAt(null);
+        normalizeUpdatedAt(task, task); // Cập nhật thời gian cập nhật
+        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(task)); // Lưu task vào database
     }
 
     @PutMapping("/{id}")
     public Task updateTask(@PathVariable String id, @Valid @RequestBody Task task) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found");
-        }
-        task.setId(id);
-        task.setDeleted(false);
-        normalizeUpdatedAt(task);
-        return repository.save(task);
+        Task existingTask = repository.findById(id)
+                .filter(t -> !t.isDeleted()) // Đảm bảo task ko trong thùng rác
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+
+        existingTask.setTitle(task.getTitle());
+        existingTask.setDescription(task.getDescription());
+        existingTask.setCategory(task.getCategory());
+        existingTask.setDeadline(task.getDeadline());
+        existingTask.setCompleted(task.isCompleted());
+        existingTask.setPriority(task.getPriority());
+        existingTask.setImagePath(task.getImagePath());
+
+        normalizeUpdatedAt(existingTask, task);
+
+        return repository.save(existingTask);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable String id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        repository.deleteById(id);
+    public ResponseEntity<Task> softDeleteTask(@PathVariable String id) {
+        return repository.findById(id)
+                .map(task -> {
+                    task.setDeleted(true);
+                    task.setDeletedAt(System.currentTimeMillis());
+                    task.setUpdatedAt(System.currentTimeMillis());
+                    return ResponseEntity.ok(repository.save(task));
+                })
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Task> restoreTask(@PathVariable String id) {
+        return repository.findById(id)
+                .map(task -> {
+                    task.setDeleted(false);
+                    task.setDeletedAt(null);
+                    task.setUpdatedAt(System.currentTimeMillis());
+                    return ResponseEntity.ok(repository.save(task));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<Void> permanentlyDeleteTask(@PathVariable String id) {
+        return repository.findById(id)
+                .map(task -> {
+                    if (!task.isDeleted()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task must be in trash to be permanently deleted");
+                    }
+                    repository.deleteById(id);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found in trash"));
+    }
+
+    @DeleteMapping("/trash")
+    @Transactional
+    public ResponseEntity<Void> emptyTrash() {
+        repository.deleteByDeletedTrue();
         return ResponseEntity.noContent().build();
     }
 
-    private static void normalizeUpdatedAt(Task task) {
-        if (task.getUpdatedAt() <= 0) {
-            task.setUpdatedAt(System.currentTimeMillis());
-        }
+    /**
+     * Kiểm tra updatedAt, giá trị không hợp lý thì gán thời gian hiện tại
+     * @param targetTask: task cần cập nhật
+     * @param requestTask: task gửi lên 
+     */
+    private static void normalizeUpdatedAt(Task targetTask, Task requestTask) {
+        targetTask.setUpdatedAt(
+                requestTask.getUpdatedAt() > 0
+                        ? requestTask.getUpdatedAt()
+                        : System.currentTimeMillis()
+        );
     }
 }

@@ -13,32 +13,39 @@ import jakarta.validation.constraints.NotBlank;
 public class Task {
 
     @Id
-    @Column(nullable = false, length = 64)
+    @Column(name = "id", nullable = false, length = 36)
     private String id;
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "category", length = 100)
     private String category;
 
+    @Column(name = "deadline", length = 50)
     private String deadline;
 
-    @Column(nullable = false)
-    private boolean completed;
+    @Column(name = "completed", nullable = false)
+    private boolean completed = false;
 
+    @Column(name = "priority", length = 50)
     private String priority;
 
+    @Column(name = "image_path", length = 500)
     private String imagePath;
 
-    @Column(nullable = false)
-    private long updatedAt;
+    @Column(name = "updated_at", nullable = false)
+    private long updatedAt = 0L;
 
-    @Column(nullable = false)
-    private boolean deleted;
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private Long deletedAt;
 
     public String getId() {
         return id;
@@ -118,5 +125,13 @@ public class Task {
 
     public void setDeleted(boolean deleted) {
         this.deleted = deleted;
+    }
+
+    public Long getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Long deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }
