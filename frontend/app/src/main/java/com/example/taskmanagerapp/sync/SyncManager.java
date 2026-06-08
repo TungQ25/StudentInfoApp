@@ -60,8 +60,6 @@ public class SyncManager {
             Response<?> response; // "?" ko quan trọng trả về kiểu gì, chỉ cần kiểm tra isSuccessful()
             if (task.isDeleted()) {
                 response = todoApi.deleteTask(task.getId()).execute();
-            } else if (!isRemoteId(task.getId())) {
-                response = todoApi.createTask(task).execute();
             } else {
                 response = todoApi.updateTask(task.getId(), task).execute();
                 if (response.code() == 404) {
@@ -130,20 +128,4 @@ public class SyncManager {
         return true;
     }
 
-    /**
-     *  Kiểm tra xem ID có phải là ID từ server hay không (giả định server dùng ID số)
-     * @param id ID cần kiểm tra
-     * @return true nếu là ID từ server (chỉ chứa số)
-     */
-    private static boolean isRemoteId(String id) {
-        if (id == null || id.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < id.length(); i++) {
-            if (!Character.isDigit(id.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
 }
