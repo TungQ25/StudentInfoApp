@@ -42,8 +42,31 @@ http://10.0.2.2:8080/api/tasks
 
 ## Endpoints
 
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 - `GET /api/tasks`
 - `GET /api/tasks/{id}`
 - `POST /api/tasks`
 - `PUT /api/tasks/{id}`
 - `DELETE /api/tasks/{id}`
+
+## Auth payloads
+
+Register:
+
+```json
+{
+  "username": "demo",
+  "email": "demo@example.com",
+  "password": "123456"
+}
+```
+
+Login accepts username or email in `identifier`:
+
+```json
+{
+  "identifier": "demo",
+  "password": "123456"
+}
+```
