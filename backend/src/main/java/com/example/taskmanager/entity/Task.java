@@ -47,6 +47,9 @@ public class Task {
     @Column(name = "deleted_at")
     private Long deletedAt;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     public String getId() {
         return id;
     }
@@ -133,5 +136,13 @@ public class Task {
 
     public void setDeletedAt(Long deletedAt) {
         this.deletedAt = deletedAt;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }
