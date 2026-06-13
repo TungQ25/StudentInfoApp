@@ -64,6 +64,11 @@ public class MainActivity extends AppCompatActivity implements TaskDetailFragmen
         applySavedThemeMode();
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate: Activity Created");
+        PreferenceHelper authPreferences = new PreferenceHelper(this);
+        if (!authPreferences.hasAuthToken()) {
+            openLoginAndFinish();
+            return;
+        }
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -309,6 +314,13 @@ public class MainActivity extends AppCompatActivity implements TaskDetailFragmen
     @Override
     protected void onResume() {
         super.onResume();
+        if (preferenceHelper == null) {
+            return;
+        }
+        if (preferenceHelper != null && !preferenceHelper.hasAuthToken()) {
+            openLoginAndFinish();
+            return;
+        }
         String latestTheme = preferenceHelper.getTheme();
         if (!latestTheme.equals(appliedTheme)) {
             appliedTheme = latestTheme;
@@ -335,6 +347,13 @@ public class MainActivity extends AppCompatActivity implements TaskDetailFragmen
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         }
+    }
+
+    private void openLoginAndFinish() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void setupLaunchers() {

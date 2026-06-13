@@ -1,5 +1,6 @@
 package com.example.taskmanagerapp.ui.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -21,6 +22,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Spinner spinnerTheme;
     private Switch switchNotifications;
     private Button btnReset;
+    private Button btnLogout;
     private PreferenceHelper preferenceHelper;
 
     private static final String[] THEME_KEYS = {"light", "dark", "system"};
@@ -39,6 +41,7 @@ public class SettingsActivity extends AppCompatActivity {
         spinnerTheme = findViewById(R.id.spinnerTheme);
         switchNotifications = findViewById(R.id.switchNotifications);
         btnReset = findViewById(R.id.btnResetSettings);
+        btnLogout = findViewById(R.id.btnLogout);
         preferenceHelper = new PreferenceHelper(this);
 
         setupThemeSpinner();
@@ -78,7 +81,6 @@ public class SettingsActivity extends AppCompatActivity {
 
             @Override
             public void onNothingSelected(android.widget.AdapterView<?> parent) {
-                // No-op
             }
         });
 
@@ -89,7 +91,15 @@ public class SettingsActivity extends AppCompatActivity {
         btnReset.setOnClickListener(v -> {
             preferenceHelper.resetToDefault();
             loadSettings();
-            Toast.makeText(this, "Đã reset cài đặt về mặc định", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Settings reset", Toast.LENGTH_SHORT).show();
+        });
+
+        btnLogout.setOnClickListener(v -> {
+            preferenceHelper.clearAuth();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         });
     }
 }
