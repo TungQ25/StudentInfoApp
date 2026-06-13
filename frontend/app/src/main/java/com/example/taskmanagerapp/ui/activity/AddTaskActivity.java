@@ -141,9 +141,7 @@ public class AddTaskActivity extends AppCompatActivity {
         btnRemoveAttachment.setOnClickListener(v -> removeCurrentAttachment());
 
         btnSave.setOnClickListener(v -> {
-            if (validateData()) {
-                saveTask();
-            }
+            saveTask();
         });
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -188,18 +186,6 @@ public class AddTaskActivity extends AppCompatActivity {
             ivAttachment.setVisibility(View.GONE);
             btnRemoveAttachment.setEnabled(false);
         }
-    }
-
-    private boolean validateData() {
-        if (TextUtils.isEmpty(edtTitle.getText().toString().trim())) {
-            edtTitle.setError("Task name is required");
-            return false;
-        }
-        if (TextUtils.isEmpty(edtDeadline.getText().toString().trim())) {
-            edtDeadline.setError("Due date is required");
-            return false;
-        }
-        return true;
     }
 
     private void saveTask() {
