@@ -1,16 +1,26 @@
 <resources>
     <string name="app_name">TaskManagerApp</string>
     <string name="title_main">Tasks Manager</string>
-    <string name="title_task_detail">Chi tiết công việc</string>
+    <string name="title_task_detail">Task Details</string>
     <string name="title_add_task">Thêm công việc</string>
     <string name="title_settings">Cài đặt</string>
-    <string name="settings_title">Settings</string>
-    <string name="settings_theme_label">Theme:</string>
-    <string name="settings_notifications_label">Notifications:</string>
-    <string name="settings_reset_button">RESET</string>
+    <string name="settings_theme_label">Giao diện:</string>
+    <string name="settings_notifications_label">Thông báo:</string>
+    <string name="settings_reset_button">LÀM MỚI</string>
+    <string name="settings_logout_button">ĐĂNG XUẤT</string>
     <string name="open_settings">Cài đặt</string>
 
-    <!-- Task attachment -->
+    <string name="auth_login_title">Login</string>
+    <string name="auth_register_title">Create account</string>
+    <string name="auth_identifier">Username or email</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_login">Login</string>
+    <string name="auth_register">Register</string>
+    <string name="auth_open_register">Tạo tài khoản mới</string>
+    <string name="auth_open_login">Đã có tài khoản? Login</string>
+
     <string name="task_attachment_label">Ảnh đính kèm</string>
     <string name="task_attachment_pick">CHỌN ẢNH</string>
     <string name="task_attachment_remove">XOÁ ẢNH</string>

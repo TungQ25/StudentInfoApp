@@ -11,6 +11,10 @@ public class PreferenceHelper {
     public static final String KEY_THEME = "theme";
     public static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
     public static final String KEY_SORT_BY = "sort_by";
+    public static final String KEY_AUTH_TOKEN = "auth_token";
+    public static final String KEY_AUTH_USER_ID = "auth_user_id";
+    public static final String KEY_AUTH_USERNAME = "auth_username";
+    public static final String KEY_AUTH_EMAIL = "auth_email";
     public static final String THEME_LIGHT = "light";
     public static final String THEME_DARK = "dark";
     public static final String THEME_SYSTEM = "system";
@@ -53,6 +57,35 @@ public class PreferenceHelper {
         String value = preferences.getString(KEY_SORT_BY, "deadline");
         Log.d(TAG, "getSortBy -> " + value);
         return value;
+    }
+
+    public void saveAuth(String token, String userId, String username, String email) {
+        preferences.edit()
+                .putString(KEY_AUTH_TOKEN, token)
+                .putString(KEY_AUTH_USER_ID, userId)
+                .putString(KEY_AUTH_USERNAME, username)
+                .putString(KEY_AUTH_EMAIL, email)
+                .apply();
+        Log.d(TAG, "saveAuth -> " + username);
+    }
+
+    public String getAuthToken() {
+        return preferences.getString(KEY_AUTH_TOKEN, null);
+    }
+
+    public boolean hasAuthToken() {
+        String token = getAuthToken();
+        return token != null && !token.trim().isEmpty();
+    }
+
+    public void clearAuth() {
+        preferences.edit()
+                .remove(KEY_AUTH_TOKEN)
+                .remove(KEY_AUTH_USER_ID)
+                .remove(KEY_AUTH_USERNAME)
+                .remove(KEY_AUTH_EMAIL)
+                .apply();
+        Log.d(TAG, "clearAuth");
     }
 
     public void resetToDefault() {

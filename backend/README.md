@@ -37,18 +37,18 @@ http://localhost:8080/api/tasks
 Android Emulator should call it through:
 
 ```text
-http://10.0.2.2:8080/api/tasks
+http://192.168.1.3:8080/api/tasks
 ```
 
 ## Endpoints
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
-- `GET /api/tasks`
-- `GET /api/tasks/{id}`
-- `POST /api/tasks`
-- `PUT /api/tasks/{id}`
-- `DELETE /api/tasks/{id}`
+- `GET /api/tasks` requires `Authorization: Bearer <token>`
+- `GET /api/tasks/{id}` requires `Authorization: Bearer <token>`
+- `POST /api/tasks` requires `Authorization: Bearer <token>`
+- `PUT /api/tasks/{id}` requires `Authorization: Bearer <token>`
+- `DELETE /api/tasks/{id}` requires `Authorization: Bearer <token>`
 
 ## Auth payloads
 
@@ -68,5 +68,19 @@ Login accepts username or email in `identifier`:
 {
   "identifier": "demo",
   "password": "123456"
+}
+```
+
+Auth responses include the user profile and JWT:
+
+```json
+{
+  "id": "...",
+  "username": "demo",
+  "email": "demo@example.com",
+  "createdAt": 123456789,
+  "token": "...",
+  "tokenType": "Bearer",
+  "expiresAt": 123456789
 }
 ```

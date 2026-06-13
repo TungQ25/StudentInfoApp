@@ -8,6 +8,7 @@ import com.example.taskmanager.dto.LoginRequest;
 import com.example.taskmanager.dto.RegisterRequest;
 import com.example.taskmanager.entity.User;
 import com.example.taskmanager.repository.UserRepository;
+import com.example.taskmanager.security.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,10 +18,12 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository, JwtService jwtService) {
         this.userRepository = userRepository;
+        this.jwtService = jwtService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -60,17 +63,16 @@ public class AuthService {
         return toResponse(user);
     }
 
-    private static AuthResponse toResponse(User user) {
+    private AuthResponse toResponse(User user) {
+        long expiresAt = System.currentTimeMillis() + jwtService.getExpirationMs();
         return new AuthResponse(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                jwtService.generateToken(user),
+                "Bearer",
+                expiresAt
         );
     }
-
-    /**
-     * TODO: Implement logout and token management for stateless authentication (e.g., JWT)
-     * Thay vì lưu trữ session trên server, sẽ tạo và trả về một JWT token khi người dùng đăng nhập thành công.
-     */
-} 
+}

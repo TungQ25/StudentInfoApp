@@ -58,7 +58,7 @@ public class Task implements Serializable {
 
     @Ignore
     @SerializedName("userId")
-    private int userId;
+    private String userId;
 
     /** Trang thai UI, khong luu trong DB. */
     @Ignore
@@ -231,11 +231,11 @@ public class Task implements Serializable {
         this.deleted = deleted;
     }
 
-    public int getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

@@ -9,6 +9,7 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
 import com.example.taskmanagerapp.data.local.AppDatabase;
+import com.example.taskmanagerapp.data.remote.RetrofitClient;
 import com.example.taskmanagerapp.sync.SyncWorker;
 
 import java.util.concurrent.TimeUnit;
@@ -17,6 +18,7 @@ public class TaskManagerApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        RetrofitClient.initialize(this);
         AppDatabase.getInstance(this); // khởi tạo database singleton
         schedulePeriodicSync();
     }
