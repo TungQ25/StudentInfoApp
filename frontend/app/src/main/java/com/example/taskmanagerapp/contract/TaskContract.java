@@ -17,6 +17,7 @@ public final class TaskContract {
     public static final String COL_UPDATED_AT = "updated_at";
     public static final String COL_SYNCED = "synced";
     public static final String COL_DELETED = "deleted";
+    public static final String COL_USER_ID = "user_id";
 
     private TaskContract() {
     }

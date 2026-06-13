@@ -27,42 +27,42 @@ public interface TaskDao {
     @Delete
     int delete(Task task);
 
-    @Query("DELETE FROM tasks WHERE id = :taskId")
-    int deleteById(String taskId);
+    @Query("DELETE FROM tasks WHERE id = :taskId AND user_id = :userId")
+    int deleteById(String taskId, String userId);
 
-    @Query("SELECT * FROM tasks WHERE deleted = 0 ORDER BY deadline ASC")
-    List<Task> getAllTasks();
+    @Query("SELECT * FROM tasks WHERE deleted = 0 AND user_id = :userId ORDER BY deadline ASC")
+    List<Task> getAllTasks(String userId);
 
-    @Query("SELECT * FROM tasks WHERE deleted = 0 ORDER BY deadline ASC")
-    LiveData<List<Task>> getAllTasksLive();
+    @Query("SELECT * FROM tasks WHERE deleted = 0 AND user_id = :userId ORDER BY deadline ASC")
+    LiveData<List<Task>> getAllTasksLive(String userId);
 
-    @Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
-    Task getTaskById(String taskId);
+    @Query("SELECT * FROM tasks WHERE id = :taskId AND user_id = :userId LIMIT 1")
+    Task getTaskById(String taskId, String userId);
 
-    @Query("SELECT * FROM tasks WHERE deleted = 0 AND category = :category ORDER BY deadline ASC")
-    List<Task> getTasksByCategory(String category);
+    @Query("SELECT * FROM tasks WHERE deleted = 0 AND user_id = :userId AND category = :category ORDER BY deadline ASC")
+    List<Task> getTasksByCategory(String userId, String category);
 
-    @Query("SELECT * FROM tasks WHERE deleted = 0 AND is_completed = :completed ORDER BY deadline ASC")
-    List<Task> getTasksByCompleted(boolean completed);
+    @Query("SELECT * FROM tasks WHERE deleted = 0 AND user_id = :userId AND is_completed = :completed ORDER BY deadline ASC")
+    List<Task> getTasksByCompleted(String userId, boolean completed);
 
-    @Query("SELECT * FROM tasks WHERE deleted = 0 AND title LIKE '%' || :keyword || '%' ORDER BY deadline ASC")
-    List<Task> searchByTitle(String keyword);
+    @Query("SELECT * FROM tasks WHERE deleted = 0 AND user_id = :userId AND title LIKE '%' || :keyword || '%' ORDER BY deadline ASC")
+    List<Task> searchByTitle(String userId, String keyword);
 
-    @Query("SELECT * FROM tasks WHERE synced = 0 ORDER BY updated_at ASC")
-    List<Task> getPendingSyncTasks();
+    @Query("SELECT * FROM tasks WHERE synced = 0 AND user_id = :userId ORDER BY updated_at ASC")
+    List<Task> getPendingSyncTasks(String userId);
 
-    @Query("SELECT * FROM tasks WHERE deleted = 1 ORDER BY updated_at ASC")
-    List<Task> getDeletedTasks();
+    @Query("SELECT * FROM tasks WHERE deleted = 1 AND user_id = :userId ORDER BY updated_at ASC")
+    List<Task> getDeletedTasks(String userId);
 
-    @Query("UPDATE tasks SET synced = 1, deleted = 0 WHERE id = :taskId")
-    int markSynced(String taskId);
+    @Query("UPDATE tasks SET synced = 1, deleted = 0 WHERE id = :taskId AND user_id = :userId")
+    int markSynced(String taskId, String userId);
 
-    @Query("UPDATE tasks SET synced = 1, deleted = 1 WHERE id = :taskId")
-    int markDeletedSynced(String taskId);
+    @Query("UPDATE tasks SET synced = 1, deleted = 1 WHERE id = :taskId AND user_id = :userId")
+    int markDeletedSynced(String taskId, String userId);
 
-    @Query("UPDATE tasks SET deleted = 1, synced = 0, updated_at = :updatedAt WHERE id = :taskId")
-    int markDeletedForSync(String taskId, long updatedAt);
+    @Query("UPDATE tasks SET deleted = 1, synced = 0, updated_at = :updatedAt WHERE id = :taskId AND user_id = :userId")
+    int markDeletedForSync(String taskId, String userId, long updatedAt);
 
-    @Query("DELETE FROM tasks WHERE id = :taskId")
-    int deletePermanently(String taskId);
+    @Query("DELETE FROM tasks WHERE id = :taskId AND user_id = :userId")
+    int deletePermanently(String taskId, String userId);
 }
