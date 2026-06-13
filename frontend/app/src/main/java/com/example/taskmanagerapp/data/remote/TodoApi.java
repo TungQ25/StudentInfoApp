@@ -26,5 +26,5 @@ public interface TodoApi {
     Call<Task> updateTask(@Path("id") String id, @Body Task task);
 
     @DELETE("api/tasks/{id}")
-    Call<Void> deleteTask(@Path("id") String id);
+    Call<Task> deleteTask(@Path("id") String id);
 }
