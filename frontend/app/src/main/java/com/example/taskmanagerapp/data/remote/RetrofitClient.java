@@ -1,20 +1,27 @@
 package com.example.taskmanagerapp.data.remote;
 
+import android.content.Context;
+import com.example.taskmanagerapp.utils.PreferenceHelper;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public final class RetrofitClient {
-    // TODO: Đẩy backend lên online và đổi đường dẫn URL
-    private static final String BASE_URL = "http://10.0.2.2:8080/";
+    private static final String BASE_URL = "http://192.168.1.3:8080/"; // TODO: thay tạm bằng ip máy tính để test, đổi lại khi deploy app
 
     private static volatile Retrofit retrofit;
+    private static volatile Context appContext;
 
     // Khai báo để ko cho khởi tạo object kiểu này
     private RetrofitClient() {
+    }
+
+    public static void initialize(Context context) {
+        appContext = context.getApplicationContext();
     }
 
     public static Retrofit getInstance() {
@@ -25,9 +32,25 @@ public final class RetrofitClient {
                     logging.setLevel(HttpLoggingInterceptor.Level.BODY);
 
                     OkHttpClient client = new OkHttpClient.Builder()
-                            .connectTimeout(30, TimeUnit.SECONDS) // sau 30s sẽ timeout
+                            .connectTimeout(30, TimeUnit.SECONDS)
                             .readTimeout(30, TimeUnit.SECONDS)
                             .writeTimeout(30, TimeUnit.SECONDS)
+                            .addInterceptor(chain -> {
+                                Request original = chain.request();
+                                if (appContext == null) {
+                                    return chain.proceed(original);
+                                }
+
+                                String token = new PreferenceHelper(appContext).getAuthToken();
+                                if (token == null || token.trim().isEmpty()) {
+                                    return chain.proceed(original);
+                                }
+
+                                Request authenticated = original.newBuilder()
+                                        .header("Authorization", "Bearer " + token)
+                                        .build();
+                                return chain.proceed(authenticated);
+                            })
                             .addInterceptor(logging)
                             .build();
 
@@ -48,5 +71,9 @@ public final class RetrofitClient {
      */
     public static TodoApi getTodoApi() {
         return getInstance().create(TodoApi.class);
+    }
+
+    public static AuthApi getAuthApi() {
+        return getInstance().create(AuthApi.class);
     }
 }

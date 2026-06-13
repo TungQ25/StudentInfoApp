@@ -3,11 +3,12 @@ package com.example.taskmanagerapp.sync;
 import android.content.Context;
 import android.util.Log;
 
-import com.example.taskmanagerapp.utils.NetworkState;
-import com.example.taskmanagerapp.data.remote.RetrofitClient;
-import com.example.taskmanagerapp.data.model.Task;
 import com.example.taskmanagerapp.data.local.TaskDao;
+import com.example.taskmanagerapp.data.model.Task;
+import com.example.taskmanagerapp.data.remote.RetrofitClient;
 import com.example.taskmanagerapp.data.remote.TodoApi;
+import com.example.taskmanagerapp.utils.NetworkState;
+import com.example.taskmanagerapp.utils.PreferenceHelper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,11 +22,13 @@ public class SyncManager {
     private final Context appContext;
     private final TaskDao taskDao;
     private final TodoApi todoApi;
+    private final PreferenceHelper preferenceHelper;
 
     public SyncManager(Context context, TaskDao taskDao) {
-        this.appContext = context.getApplicationContext(); // Dùng ApplicationContext để tránh leak Activity
+        this.appContext = context.getApplicationContext();
         this.taskDao = taskDao;
         this.todoApi = RetrofitClient.getTodoApi();
+        this.preferenceHelper = new PreferenceHelper(this.appContext);
     }
 
     /**
@@ -35,6 +38,9 @@ public class SyncManager {
         // Kiểm tra mạng
         if (!NetworkState.isOnline(appContext)) {
             return false;
+        }
+        if (!preferenceHelper.hasAuthToken()) {
+            return true;
         }
 
         try {
@@ -75,6 +81,7 @@ public class SyncManager {
                 }
             } else if (response.code() == 401) {
                 Log.w(TAG, "Authorization failed while syncing task " + task.getId());
+                preferenceHelper.clearAuth();
                 return false;
             } else if (response.code() >= 500) {
                 return false;
@@ -95,6 +102,7 @@ public class SyncManager {
         if (!response.isSuccessful()) {
             if (response.code() == 401) {
                 Log.w(TAG, "Authorization failed while fetching tasks");
+                preferenceHelper.clearAuth();
                 return false;
             }
             return response.code() != 404 && response.code() < 500;
@@ -127,5 +135,4 @@ public class SyncManager {
         }
         return true;
     }
-
 }
