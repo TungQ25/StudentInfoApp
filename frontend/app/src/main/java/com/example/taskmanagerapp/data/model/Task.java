@@ -271,7 +271,7 @@ public class Task implements Serializable {
                 remote.isCompleted(),
                 remote.getPriority() == null ? "Low" : remote.getPriority(),
                 remote.getImagePath(),
-                System.currentTimeMillis(),
+                remote.getUpdatedAt(),
                 true,
                 false);
         task.setUserId(remote.getUserId());

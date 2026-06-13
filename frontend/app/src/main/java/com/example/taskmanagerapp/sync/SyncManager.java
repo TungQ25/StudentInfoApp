@@ -37,9 +37,11 @@ public class SyncManager {
     public boolean syncNow() {
         // Kiểm tra mạng
         if (!NetworkState.isOnline(appContext)) {
+            Log.d(TAG, "Skip sync: device is offline");
             return false;
         }
         if (!preferenceHelper.hasAuthToken()) {
+            Log.d(TAG, "Skip sync: user is not authenticated");
             return true;
         }
 
@@ -63,33 +65,39 @@ public class SyncManager {
     private boolean pushLocalChanges() throws IOException {
         List<Task> pendingTasks = taskDao.getPendingSyncTasks();
         for (Task task : pendingTasks) {
-            Response<?> response; // "?" ko quan trọng trả về kiểu gì, chỉ cần kiểm tra isSuccessful()
-            if (task.isDeleted()) {
-                response = todoApi.deleteTask(task.getId()).execute();
-            } else {
-                response = todoApi.updateTask(task.getId(), task).execute();
-                if (response.code() == 404) {
-                    response = todoApi.createTask(task).execute();
-                }
-            }
+            Response<?> response = pushTask(task); // "?" ko quan trọng trả về kiểu gì, chỉ cần kiểm tra isSuccessful()
 
-            if (response.isSuccessful() || response.code() == 404 && task.isDeleted()) {
+            if (response.isSuccessful() || (response.code() == 404 && task.isDeleted())) {
                 if (task.isDeleted()) {
                     taskDao.markDeletedSynced(task.getId());
                 } else {
                     taskDao.markSynced(task.getId());
                 }
+                Log.d(TAG, "Synced local task " + task.getId());
             } else if (response.code() == 401) {
                 Log.w(TAG, "Authorization failed while syncing task " + task.getId());
                 preferenceHelper.clearAuth();
                 return false;
             } else if (response.code() >= 500) {
+                Log.w(TAG, "Server error while syncing task " + task.getId() + ": " + response.code());
                 return false;
             } else {
                 Log.w(TAG, "Unhandled sync response " + response.code() + " for task " + task.getId());
             }
         }
         return true;
+    }
+
+    private Response<?> pushTask(Task task) throws IOException {
+        if (task.isDeleted()) {
+            return todoApi.deleteTask(task.getId()).execute();
+        }
+
+        Response<Task> response = todoApi.updateTask(task.getId(), task).execute();
+        if (response.code() == 404) {
+            return todoApi.createTask(task).execute();
+        }
+        return response;
     }
 
     /**
@@ -105,7 +113,8 @@ public class SyncManager {
                 preferenceHelper.clearAuth();
                 return false;
             }
-            return response.code() != 404 && response.code() < 500;
+            Log.w(TAG, "Fetch tasks failed with response " + response.code());
+            return response.code() < 500;
         }
 
         // Ko có dữ liệu gì thì ko có gì để cập nhật -> true
