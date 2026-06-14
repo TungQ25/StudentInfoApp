@@ -8,8 +8,7 @@ import com.example.taskmanager.repository.TaskRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,24 +33,24 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<Task> getAllTasks() {
-        return repository.findActiveAccessibleTasks(currentUserId());
+    public List<Task> getAllTasks(@AuthenticationPrincipal String userId) {
+        return repository.findActiveAccessibleTasks(currentUserId(userId));
     }
 
     @GetMapping("/trash")
-    public List<Task> getTrash() {
-        return repository.findAccessibleTrashTasks(currentUserId());
+    public List<Task> getTrash(@AuthenticationPrincipal String userId) {
+        return repository.findAccessibleTrashTasks(currentUserId(userId));
     }
 
     @GetMapping("/{id}")
-    public Task getTaskById(@PathVariable String id) {
-        return repository.findAccessibleById(id, currentUserId())
+    public Task getTaskById(@PathVariable String id, @AuthenticationPrincipal String userId) {
+        return repository.findAccessibleById(id, currentUserId(userId))
                 .filter(task -> !task.isDeleted())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
     @PostMapping
-    public ResponseEntity<Task> createTask(@Valid @RequestBody Task task) {
+    public ResponseEntity<Task> createTask(@Valid @RequestBody Task task, @AuthenticationPrincipal String userId) {
         if (task.getId() == null || task.getId().isBlank()) {
             task.setId(UUID.randomUUID().toString());
         }
@@ -61,14 +60,14 @@ public class TaskController {
 
         task.setDeleted(false);
         task.setDeletedAt(null);
-        task.setUserId(currentUserId());
+        task.setUserId(currentUserId(userId));
         normalizeUpdatedAt(task, task);
         return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(task));
     }
 
     @PutMapping("/{id}")
-    public Task updateTask(@PathVariable String id, @Valid @RequestBody Task task) {
-        Task existingTask = repository.findAccessibleById(id, currentUserId())
+    public Task updateTask(@PathVariable String id, @Valid @RequestBody Task task, @AuthenticationPrincipal String userId) {
+        Task existingTask = repository.findAccessibleById(id, currentUserId(userId))
                 .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
@@ -85,8 +84,8 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Task> softDeleteTask(@PathVariable String id) {
-        return repository.findAccessibleById(id, currentUserId())
+    public ResponseEntity<Task> softDeleteTask(@PathVariable String id, @AuthenticationPrincipal String userId) {
+        return repository.findAccessibleById(id, currentUserId(userId))
                 .map(task -> {
                     task.setDeleted(true);
                     task.setDeletedAt(System.currentTimeMillis());
@@ -97,8 +96,8 @@ public class TaskController {
     }
 
     @PostMapping("/{id}/restore")
-    public ResponseEntity<Task> restoreTask(@PathVariable String id) {
-        return repository.findAccessibleById(id, currentUserId())
+    public ResponseEntity<Task> restoreTask(@PathVariable String id, @AuthenticationPrincipal String userId) {
+        return repository.findAccessibleById(id, currentUserId(userId))
                 .map(task -> {
                     task.setDeleted(false);
                     task.setDeletedAt(null);
@@ -109,8 +108,8 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}/permanent")
-    public ResponseEntity<Void> permanentlyDeleteTask(@PathVariable String id) {
-        return repository.findAccessibleById(id, currentUserId())
+    public ResponseEntity<Void> permanentlyDeleteTask(@PathVariable String id, @AuthenticationPrincipal String userId) {
+        return repository.findAccessibleById(id, currentUserId(userId))
                 .map(task -> {
                     if (!task.isDeleted()) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task must be in trash to be permanently deleted");
@@ -123,8 +122,8 @@ public class TaskController {
 
     @DeleteMapping("/trash")
     @Transactional
-    public ResponseEntity<Void> emptyTrash() {
-        repository.deleteAccessibleTrash(currentUserId());
+    public ResponseEntity<Void> emptyTrash(@AuthenticationPrincipal String userId) {
+        repository.deleteAccessibleTrash(currentUserId(userId));
         return ResponseEntity.noContent().build();
     }
 
@@ -141,11 +140,10 @@ public class TaskController {
         );
     }
 
-    private static String currentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
+    private static String currentUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
-        return authentication.getName();
+        return userId;
     }
 }
