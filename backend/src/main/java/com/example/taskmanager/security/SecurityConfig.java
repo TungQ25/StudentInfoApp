@@ -2,6 +2,8 @@ package com.example.taskmanager.security;
 
 import java.util.List;
 
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,9 +33,20 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response,
+                                                   authException) ->
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Authentication token is missing or invalid"))
+
+                        .accessDeniedHandler((request, response,
+                                                   accessDeniedException) ->
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN,"Access denied"))
+                )
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // Cho phép tất cả các request đến /error mà không cần xác thực
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/error").permitAll() // Bỏ qua xác thực cho endpoint /error để đảm bảo lỗi 401/403 được trả về đúng cách
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
