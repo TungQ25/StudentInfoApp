@@ -22,7 +22,9 @@ public final class NetworkState {
 
         NetworkCapabilities capabilities = manager.getNetworkCapabilities(network);
         return capabilities != null
-                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                && (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
     }
 }
