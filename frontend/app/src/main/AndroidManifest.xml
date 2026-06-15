@@ -35,10 +35,6 @@
             android:name=".ui.activity.TaskDetailActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activity.SettingsActivity"
-            android:exported="false"
-            android:label="@string/title_settings" />
-        <activity
             android:name=".ui.activity.MainActivity"
             android:exported="false" />
     </application>
