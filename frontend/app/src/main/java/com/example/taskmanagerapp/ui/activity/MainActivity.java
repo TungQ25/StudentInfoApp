@@ -3,312 +3,142 @@ package com.example.taskmanagerapp.ui.activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
-import android.graphics.Rect;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.ItemTouchHelper;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.fragment.app.Fragment;
 
-import com.example.taskmanagerapp.ui.adapter.CategoryAdapter;
 import com.example.taskmanagerapp.R;
-import com.example.taskmanagerapp.data.model.Task;
-import com.example.taskmanagerapp.ui.adapter.TaskAdapter;
-import com.example.taskmanagerapp.ui.fragment.TaskDetailFragment;
-import com.example.taskmanagerapp.utils.ImageStorageHelper;
+import com.example.taskmanagerapp.ui.fragment.SettingsFragment;
+import com.example.taskmanagerapp.ui.fragment.TaskFragment;
 import com.example.taskmanagerapp.utils.PreferenceHelper;
-import com.example.taskmanagerapp.viewmodel.TaskViewModel;
+import com.google.android.material.appbar.MaterialToolbar;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+public class MainActivity extends AppCompatActivity {
+    private static final String STATE_SELECTED_BOTTOM_NAV_ITEM = "selectedBottomNavItem";
 
-public class MainActivity extends AppCompatActivity implements TaskDetailFragment.OnNavigateToFullDetailListener {
-    private static final String TAG = "MainActivityLifecycle";
-
-    RecyclerView rvTasks, rvCategories;
-    Button btnAddTask, btnDeleteSelected, btnSettings;
-    View fragmentContainer, detailScrim;
-    TaskAdapter taskAdapter;
-    CategoryAdapter categoryAdapter;
-    TaskViewModel taskViewModel;
-    PreferenceHelper preferenceHelper;
-    ImageStorageHelper imageStorage;
-    String appliedTheme;
-    ExecutorService executorService;
-    Handler mainHandler;
-
-    ActivityResultLauncher<Intent> addTaskLauncher;
-    ActivityResultLauncher<Intent> detailTaskLauncher;
+    private MaterialToolbar toolbar;
+    private View bottomNavigation;
+    private PreferenceHelper preferenceHelper;
+    private String appliedTheme;
+    private int selectedBottomNavItem = R.id.nav_task;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         applySavedThemeMode();
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate: Activity Created");
-        PreferenceHelper authPreferences = new PreferenceHelper(this);
-        if (!authPreferences.hasAuthToken()) {
+
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_main);
+
+        initializeViews();
+
+        if (!preferenceHelper.hasAuthToken()) {
             openLoginAndFinish();
             return;
         }
-        EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
+
+        if (savedInstanceState != null) {
+            selectedBottomNavItem = savedInstanceState.getInt(STATE_SELECTED_BOTTOM_NAV_ITEM, R.id.nav_task);
+        }
+
+        // Handle window insets for edge-to-edge display
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
+            // Điều chỉnh lề thanh điều hướng phía dưới để phù hợp với thanh điều hướng hệ thống
+            if (bottomNavigation != null) {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) bottomNavigation.getLayoutParams();
+                params.bottomMargin = systemBars.bottom;
+                bottomNavigation.setLayoutParams(params);
+            }
             return insets;
         });
 
-        rvTasks = findViewById(R.id.rvTasks);
-        rvCategories = findViewById(R.id.rvCategories);
-        btnAddTask = findViewById(R.id.btnAddTask);
-        btnSettings = findViewById(R.id.btnSettings);
-        btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
-        fragmentContainer = findViewById(R.id.fragment_container);
-        detailScrim = findViewById(R.id.detail_scrim); 
+        setupBottomNavigation();
+        if (getSupportFragmentManager().findFragmentById(R.id.main_fragment_container) == null) {
+            showSelectedFragment(selectedBottomNavItem);
+        } else {
+            applyBottomNavigationState(selectedBottomNavItem);
+        }
+    }
 
-        // Initialize ViewModel - đảm bảo dữ liệu được giữ nguyên khi xoay màn hình
-        taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
-
+    private void initializeViews() {
+        toolbar = findViewById(R.id.toolbar);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
         preferenceHelper = new PreferenceHelper(this);
-        imageStorage = new ImageStorageHelper(this);
         appliedTheme = preferenceHelper.getTheme();
-        mainHandler = new Handler(Looper.getMainLooper()); // tạo một handler để thực hiện các tác vụ trên main thread
-        executorService = Executors.newSingleThreadExecutor(); // tạo một thread để thực hiện các tác vụ
-
-        setupRecyclerViews(); // khởi tạo recycler view để hiển thị danh sách task  
-        setupLaunchers(); // khởi tạo launchers để xử lý kết quả từ các activity
-        taskViewModel.syncTasks(); // đồng bộ dữ liệu từ server
-
-        // Observe tasks from ViewModel - UI tự động cập nhật khi dữ liệu thay đổi (ví dụ: khi thêm, xóa, sửa)
-        taskViewModel.getTasks().observe(this, tasks -> {
-            if (tasks != null) {
-                taskAdapter.submitList(new ArrayList<>(tasks));
-            }
-        });
-
-        // Lắng nghe kết quả trả về từ TaskDetailFragment (Fragment Result API)
-        getSupportFragmentManager().setFragmentResultListener(TaskDetailFragment.RESULT_KEY, this, (requestKey, bundle) -> {
-            String resultMessage = bundle.getString(TaskDetailFragment.RESULT_MESSAGE);
-            if (resultMessage != null) {
-                Toast.makeText(this, resultMessage, Toast.LENGTH_SHORT).show();
-            }
-        });
-        getSupportFragmentManager().addOnBackStackChangedListener(this::updateDetailOverlayVisibility);
-
-        if (btnAddTask != null) {
-            btnAddTask.setOnClickListener(v -> {
-                Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
-                addTaskLauncher.launch(intent);
-            });
-        }
-        if (btnSettings != null) {
-            btnSettings.setOnClickListener(v -> {
-                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        if (btnDeleteSelected != null) {
-            btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
-        }
     }
 
-    private void setupRecyclerViews() {
-        taskAdapter = new TaskAdapter(new TaskAdapter.OnTaskClickListener() {
-            @Override
-            public void onTaskClick(Task task, int position) {
-                if (btnDeleteSelected != null && btnDeleteSelected.getVisibility() == View.VISIBLE) {
-                    task.setSelected(!task.isSelected());
-                    taskAdapter.notifyItemChanged(position);
-                } else {
-                    showTaskDetail(task);
-                }
-            }
-
-            @Override
-            public void onTaskLongClick(Task task, int position) {
-                toggleMultiSelectMode(task, position);
-            }
-
-            @Override
-            public void onStatusChanged(Task task, boolean isCompleted) {
-                task.setCompleted(isCompleted);
-                taskViewModel.updateTask(task);
-            }
-        });
-        rvTasks.setLayoutManager(new LinearLayoutManager(this));
-        rvTasks.setAdapter(taskAdapter);
-
-        // Swipe-to-delete
-        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
-            @Override
-            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                return false;
-            }
-
-            @Override
-            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                int position = viewHolder.getAdapterPosition();
-                Task task = taskAdapter.getCurrentList().get(position);
-                deleteTaskAndImage(task);
-                Toast.makeText(MainActivity.this, "Task deleted", Toast.LENGTH_SHORT).show();
-            }
-        }).attachToRecyclerView(rvTasks);
-
-        // Category Horizontal RecyclerView
-        List<String> categories = Arrays.asList("All", "Homework", "Project", "Exam");
-        categoryAdapter = new CategoryAdapter(categories, category -> {
-            Toast.makeText(MainActivity.this, "Filter: " + category, Toast.LENGTH_SHORT).show();
-        });
-        rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        rvCategories.setAdapter(categoryAdapter);
-    }
-
-    private void toggleMultiSelectMode(Task task, int position) {
-        if (btnDeleteSelected != null) {
-            btnDeleteSelected.setVisibility(View.VISIBLE);
-        }
-        task.setSelected(true);
-        taskAdapter.notifyItemChanged(position);
-    }
-
-    private void deleteSelectedTasks() {
-        List<Task> currentList = taskAdapter.getCurrentList();
-        for (Task t : currentList) {
-            if (t.isSelected()) {
-                deleteTaskAndImage(t);
-            }
-        }
-        if (btnDeleteSelected != null) {
-            btnDeleteSelected.setVisibility(View.GONE);
-        }
-    }
-
-    // Xóa task và bất kỳ file ảnh (nếu có) được gắn với task đó.
-    private void deleteTaskAndImage(Task task) {
-        if (task == null) return;
-        String img = task.getImagePath();
-        if (img != null && !img.isEmpty()) {
-            imageStorage.deleteImage(img);
-        }
-        taskViewModel.deleteTask(task.getId());
-    }
-
-    // Tìm task theo ID
-    private Task findTaskById(String taskId) {
-        if (taskId == null) return null;
-        for (Task t : taskAdapter.getCurrentList()) {
-            if (taskId.equals(t.getId())) return t;
-        }
-        return null;
-    }
-
-    private boolean isTwoPane() {
-        return getResources().getConfiguration().smallestScreenWidthDp >= 600;
-    }
-
-    private void showTaskDetail(Task task) {
-        TaskDetailFragment fragment = TaskDetailFragment.newInstance(task);
-        if (fragmentContainer != null) fragmentContainer.setVisibility(View.VISIBLE);
-        if (detailScrim != null) detailScrim.setVisibility(isTwoPane() ? View.GONE : View.VISIBLE);
-        getSupportFragmentManager().beginTransaction()
-                // Animation khi mở/đóng TaskDetailFragment
-//                .setCustomAnimations(
-//                        R.anim.slide_in_right,
-//                        R.anim.slide_out_left,
-//                        R.anim.slide_in_left,
-//                        R.anim.slide_out_right
-//                )
-                .replace(R.id.fragment_container, fragment)
-                .addToBackStack(null)
-                .commit();
-    }
-
-    @Override
-    public void onNavigateToFullDetail(Task task) { 
-        if (task == null) {
+    private void setupBottomNavigation() {
+        if (bottomNavigation == null) {
             return;
         }
-        getSupportFragmentManager().popBackStack();
-        int position = findTaskListPosition(task); // tìm vị trí của task trong danh sách
-        openTaskDetailActivity(task, position >= 0 ? position : 0);
+        findViewById(R.id.nav_task).setOnClickListener(v -> showSelectedFragment(R.id.nav_task));
+        findViewById(R.id.nav_settings).setOnClickListener(v -> showSelectedFragment(R.id.nav_settings));
+        findViewById(R.id.nav_home).setOnClickListener(v -> showPendingNavigationItem());
+        findViewById(R.id.nav_matrix).setOnClickListener(v -> showPendingNavigationItem());
+        findViewById(R.id.nav_habit).setOnClickListener(v -> showPendingNavigationItem());
     }
 
-    private int findTaskListPosition(Task task) { // tìm vị trí của task trong danh sách
-        if (task == null || task.getId() == null) {
-            return -1;
+    private void showSelectedFragment(int itemId) {
+        selectedBottomNavItem = itemId;
+        Fragment fragment;
+        if (itemId == R.id.nav_settings) {
+            fragment = new SettingsFragment();
+        } else {
+            fragment = new TaskFragment();
+            itemId = R.id.nav_task;
+            selectedBottomNavItem = R.id.nav_task;
         }
-        List<Task> list = taskAdapter.getCurrentList(); // lấy danh sách task
-        for (int i = 0; i < list.size(); i++) {
-            if (task.getId().equals(list.get(i).getId())) { // kiểm tra xem id của task có trùng với id của task trong danh sách không
-                return i;
-            }
+
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.main_fragment_container, fragment)
+                .commit();
+        applyBottomNavigationState(itemId);
+    }
+
+    // Thêm đầy đủ chức năng thì bỏ đi
+    private void showPendingNavigationItem() {
+        selectBottomNavigationItem(selectedBottomNavItem);
+        Toast.makeText(this, "Đang phát triển", Toast.LENGTH_SHORT).show();
+    }
+
+    private void applyBottomNavigationState(int selectedItemId) {
+        selectBottomNavigationItem(selectedItemId);
+        if (toolbar != null) {
+            toolbar.setTitle(selectedItemId == R.id.nav_settings ? R.string.title_settings : R.string.title_main);
         }
-        return -1;
     }
 
-    private void openTaskDetailActivity(Task task, int position) {
-        Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
-        intent.putExtra("id", task.getId());
-        intent.putExtra("title", task.getTitle());
-        intent.putExtra("description", task.getDescription());
-        intent.putExtra("category", task.getCategory());
-        intent.putExtra("priority", task.getPriority());
-        intent.putExtra("deadline", task.getDeadline());
-        intent.putExtra("completed", task.isCompleted());
-        intent.putExtra("position", position);
-        intent.putExtra(AddTaskActivity.EXTRA_IMAGE_PATH, task.getImagePath());
-        detailTaskLauncher.launch(intent);
-    }
-
-    private void updateDetailOverlayVisibility() {
-        boolean hasDetail = getSupportFragmentManager().getBackStackEntryCount() > 0;
-        if (fragmentContainer != null) fragmentContainer.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
-        if (detailScrim != null) {
-            if (isTwoPane()) {
-                detailScrim.setVisibility(View.GONE);
-            } else {
-                detailScrim.setVisibility(hasDetail ? View.VISIBLE : View.GONE);
+    private void selectBottomNavigationItem(int selectedItemId) {
+        int[] itemIds = {
+                R.id.nav_home,
+                R.id.nav_matrix,
+                R.id.nav_task,
+                R.id.nav_habit,
+                R.id.nav_settings
+        };
+        for (int itemId : itemIds) {
+            View item = findViewById(itemId);
+            if (item != null) {
+                item.setSelected(itemId == selectedItemId);
             }
         }
     }
 
     @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (isTwoPane()) {
-            return super.dispatchTouchEvent(ev);
-        }
-        if (ev.getAction() == MotionEvent.ACTION_DOWN && getSupportFragmentManager().getBackStackEntryCount() > 0) {
-            Rect detailBounds = new Rect();
-            if (fragmentContainer != null) {
-                fragmentContainer.getGlobalVisibleRect(detailBounds);
-                int x = (int) ev.getRawX();
-                int y = (int) ev.getRawY();
-                if (!detailBounds.contains(x, y)) {
-                    getSupportFragmentManager().popBackStack();
-                }
-            }
-        }
-        return super.dispatchTouchEvent(ev);
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt(STATE_SELECTED_BOTTOM_NAV_ITEM, selectedBottomNavItem);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -317,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements TaskDetailFragmen
         if (preferenceHelper == null) {
             return;
         }
-        if (preferenceHelper != null && !preferenceHelper.hasAuthToken()) {
+        if (!preferenceHelper.hasAuthToken()) {
             openLoginAndFinish();
             return;
         }
@@ -327,14 +157,6 @@ public class MainActivity extends AppCompatActivity implements TaskDetailFragmen
             applySavedThemeMode();
             recreate();
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdownNow();
-        }
-        super.onDestroy();
     }
 
     private void applySavedThemeMode() {
@@ -354,72 +176,5 @@ public class MainActivity extends AppCompatActivity implements TaskDetailFragmen
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
-    }
-
-    private void setupLaunchers() {
-        addTaskLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-            if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                Intent data = result.getData();
-                Task task = new Task(
-                        data.getStringExtra("title"),
-                        data.getStringExtra("description"),
-                        data.getStringExtra("category"),
-                        data.getStringExtra("deadline"),
-                        data.getBooleanExtra("completed", false),
-                        data.getStringExtra("priority")
-                );
-                task.setImagePath(data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH));
-                taskViewModel.addTask(task);
-                taskViewModel.loadTasks();
-            }
-        });
-
-        detailTaskLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-            if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                Intent data = result.getData();
-                String taskId = data.getStringExtra("id");
-                if (taskId == null) {
-                    return;
-                }
-
-                if (data.getBooleanExtra("deleted", false)) {
-                    Task existing = findTaskById(taskId);
-                    if (existing != null) {
-                        deleteTaskAndImage(existing);
-                    } else {
-                        // Fallback: TaskDetailActivity gửi imagePath qua intent.
-                        String img = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
-                        if (img != null) imageStorage.deleteImage(img);
-                        taskViewModel.deleteTask(taskId);
-                    }
-                    return;
-                }
-
-                if (data.getBooleanExtra("updated", false)) {
-                    String newImagePath = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
-
-                    // Nếu ảnh đã thay đổi -> xóa file cũ để tránh orphan
-                    Task existing = findTaskById(taskId);
-                    if (existing != null) {
-                        String oldImagePath = existing.getImagePath();
-                        if (oldImagePath != null && !oldImagePath.equals(newImagePath)) {
-                            imageStorage.deleteImage(oldImagePath);
-                        }
-                    }
-
-                    Task updatedTask = new Task(
-                            taskId,
-                            data.getStringExtra("title"),
-                            data.getStringExtra("description"),
-                            data.getStringExtra("category"),
-                            data.getStringExtra("deadline"),
-                            data.getBooleanExtra("completed", false),
-                            data.getStringExtra("priority")
-                    );
-                    updatedTask.setImagePath(newImagePath);
-                    taskViewModel.updateTask(updatedTask);
-                }
-            }
-        });
     }
 }

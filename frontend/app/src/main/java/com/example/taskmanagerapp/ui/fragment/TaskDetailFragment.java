@@ -61,6 +61,10 @@ public class TaskDetailFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Fragment parent = getParentFragment();
+        if (parent instanceof OnNavigateToFullDetailListener) {
+            navigateListener = (OnNavigateToFullDetailListener) parent;
+        }
         if (getArguments() != null) {
             task = (Task) getArguments().getSerializable(ARG_TASK);
         }
