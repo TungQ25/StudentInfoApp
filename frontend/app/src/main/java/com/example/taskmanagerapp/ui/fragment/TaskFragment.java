@@ -34,6 +34,9 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavigateToFullDetailListener {
+    private static final String CATEGORY_ALL = "All";
+    private static final List<String> CATEGORIES = Arrays.asList(CATEGORY_ALL, "Homework", "Project", "Exam");
+
     private RecyclerView rvTasks;
     private RecyclerView rvCategories;
     private FloatingActionButton btnAddTask;
@@ -41,10 +44,13 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
     private View fragmentContainer;
     private View detailScrim;
     private TaskAdapter taskAdapter;
+    private CategoryAdapter categoryAdapter;
     private TaskViewModel taskViewModel;
     private ImageStorageHelper imageStorage;
     private ActivityResultLauncher<Intent> addTaskLauncher;
     private ActivityResultLauncher<Intent> detailTaskLauncher;
+    private final List<Task> allTasks = new ArrayList<>();
+    private String selectedCategory = CATEGORY_ALL;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -105,6 +111,7 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
                 if (btnDeleteSelected != null && btnDeleteSelected.getVisibility() == View.VISIBLE) {
                     task.setSelected(!task.isSelected());
                     taskAdapter.notifyItemChanged(position);
+                    updateMultiSelectControls();
                 } else {
                     showTaskDetail(task);
                 }
@@ -139,10 +146,7 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
             }
         }).attachToRecyclerView(rvTasks);
 
-        List<String> categories = Arrays.asList("All", "Homework", "Project", "Exam");
-        CategoryAdapter categoryAdapter = new CategoryAdapter(categories, category ->
-                Toast.makeText(requireContext(), "Filter: " + category, Toast.LENGTH_SHORT).show()
-        );
+        categoryAdapter = new CategoryAdapter(CATEGORIES, this::onCategorySelected);
         rvCategories.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         rvCategories.setAdapter(categoryAdapter);
     }
@@ -161,22 +165,79 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
     }
 
     private void setupActions() {
-        btnAddTask.setOnClickListener(v -> addTaskLauncher.launch(new Intent(requireContext(), AddTaskActivity.class)));
+        btnAddTask.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), AddTaskActivity.class);
+            if (!CATEGORY_ALL.equals(selectedCategory)) {
+                intent.putExtra("category", selectedCategory);
+            }
+            addTaskLauncher.launch(intent);
+        });
         btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
     }
 
     private void observeTasks() {
         taskViewModel.getTasks().observe(getViewLifecycleOwner(), tasks -> {
+            allTasks.clear();
             if (tasks != null) {
-                taskAdapter.submitList(new ArrayList<>(tasks));
+                allTasks.addAll(tasks);
             }
+            applyTaskFilter();
         });
     }
 
+    private void onCategorySelected(String category) {
+        selectedCategory = category;
+        if (categoryAdapter != null) {
+            categoryAdapter.setSelectedCategory(category);
+        }
+        applyTaskFilter();
+    }
+
+    private void applyTaskFilter() {
+        if (taskAdapter == null) {
+            return;
+        }
+        if (CATEGORY_ALL.equals(selectedCategory)) {
+            List<Task> visibleTasks = new ArrayList<>(allTasks);
+            taskAdapter.submitList(visibleTasks);
+            updateMultiSelectControls(visibleTasks);
+            return;
+        }
+
+        List<Task> filteredTasks = new ArrayList<>();
+        for (Task task : allTasks) {
+            if (selectedCategory.equals(task.getCategory())) {
+                filteredTasks.add(task);
+            }
+        }
+        taskAdapter.submitList(filteredTasks);
+        updateMultiSelectControls(filteredTasks);
+    }
+
     private void toggleMultiSelectMode(Task task, int position) {
-        btnDeleteSelected.setVisibility(View.VISIBLE);
         task.setSelected(true);
         taskAdapter.notifyItemChanged(position);
+        updateMultiSelectControls();
+    }
+
+    private void updateMultiSelectControls() {
+        if (taskAdapter == null) {
+            return;
+        }
+        updateMultiSelectControls(taskAdapter.getCurrentList());
+    }
+
+    private void updateMultiSelectControls(List<Task> visibleTasks) {
+        if (btnDeleteSelected == null) {
+            return;
+        }
+        for (Task task : visibleTasks) {
+            if (task.isSelected()) {
+                btnDeleteSelected.setVisibility(View.VISIBLE);
+                return;
+            }
+        }
+        btnDeleteSelected.setVisibility(View.GONE);
     }
 
     private void deleteSelectedTasks() {
@@ -200,7 +261,7 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
 
     private Task findTaskById(String taskId) {
         if (taskId == null) return null;
-        for (Task task : taskAdapter.getCurrentList()) {
+        for (Task task : allTasks) {
             if (taskId.equals(task.getId())) return task;
         }
         return null;
@@ -318,5 +379,6 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
         fragmentContainer = null;
         detailScrim = null;
         taskAdapter = null;
+        categoryAdapter = null;
     }
 }

@@ -103,6 +103,7 @@ public class AddTaskActivity extends AppCompatActivity {
                 isEdit = intent.getBooleanExtra("isEdit", false);
                 position = intent.getIntExtra("position", -1);
                 id = intent.getStringExtra("id");
+                String category = intent.getStringExtra("category");
 
                 if (isEdit) {
                     edtTitle.setText(intent.getStringExtra("title"));
@@ -110,13 +111,7 @@ public class AddTaskActivity extends AppCompatActivity {
                     edtDeadline.setText(intent.getStringExtra("deadline"));
                     isCompleted = intent.getBooleanExtra("completed", false);
 
-                    String category = intent.getStringExtra("category");
-                    for (int i = 0; i < categories.length; i++) {
-                        if (categories[i].equals(category)) {
-                            spinnerCategory.setSelection(i);
-                            break;
-                        }
-                    }
+                    selectCategory(category);
 
                     String priority = intent.getStringExtra("priority");
                     if ("Low".equals(priority)) rgPriority.check(R.id.rbLow);
@@ -126,6 +121,8 @@ public class AddTaskActivity extends AppCompatActivity {
                     originalImageFile = intent.getStringExtra(EXTRA_IMAGE_PATH);
                     currentImageFile = originalImageFile;
                     updateAttachmentUi();
+                } else {
+                    selectCategory(category);
                 }
             }
         }
@@ -169,6 +166,18 @@ public class AddTaskActivity extends AppCompatActivity {
     private void removeCurrentAttachment() {
         currentImageFile = null;
         updateAttachmentUi();
+    }
+
+    private void selectCategory(String category) {
+        if (category == null) {
+            return;
+        }
+        for (int i = 0; i < categories.length; i++) {
+            if (categories[i].equals(category)) {
+                spinnerCategory.setSelection(i);
+                break;
+            }
+        }
     }
 
     private void updateAttachmentUi() {
