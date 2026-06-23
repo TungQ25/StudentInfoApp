@@ -56,8 +56,8 @@ public class Task implements Serializable {
     @ColumnInfo(name = TaskContract.COL_DELETED, defaultValue = "0")
     private boolean deleted;
 
-    @Ignore
     @SerializedName("userId")
+    @ColumnInfo(name = TaskContract.COL_USER_ID, defaultValue = "''")
     private String userId;
 
     /** Trang thai UI, khong luu trong DB. */
@@ -111,7 +111,8 @@ public class Task implements Serializable {
                 imagePath,
                 System.currentTimeMillis(),
                 false,
-                false);
+                false,
+                null);
     }
 
     /** Tạo task mới với tất cả các cột DB - Room dùng khi đọc/ghi. */
@@ -126,7 +127,8 @@ public class Task implements Serializable {
             String imagePath,
             long updatedAt,
             boolean synced,
-            boolean deleted ) {
+            boolean deleted,
+            String userId) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -138,6 +140,7 @@ public class Task implements Serializable {
         this.updatedAt = updatedAt;
         this.synced = synced;
         this.deleted = deleted;
+        this.userId = userId;
         this.isSelected = false;
     }
 
@@ -273,8 +276,8 @@ public class Task implements Serializable {
                 remote.getImagePath(),
                 remote.getUpdatedAt(),
                 true,
-                false);
-        task.setUserId(remote.getUserId());
+                false,
+                remote.getUserId());
         return task;
     }
 
@@ -294,13 +297,14 @@ public class Task implements Serializable {
                 && Objects.equals(category, task.category)
                 && Objects.equals(deadline, task.deadline)
                 && Objects.equals(priority, task.priority)
-                && Objects.equals(imagePath, task.imagePath);
+                && Objects.equals(imagePath, task.imagePath)
+                && Objects.equals(userId, task.userId);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(id, title, description, category, deadline, isCompleted, priority,
-                imagePath, updatedAt, synced, deleted, isSelected);
+                imagePath, updatedAt, synced, deleted, userId, isSelected);
     }
 
     @Override
@@ -317,6 +321,7 @@ public class Task implements Serializable {
                 ", updatedAt=" + updatedAt +
                 ", synced=" + synced +
                 ", deleted=" + deleted +
+                ", userId='" + userId + '\'' +
                 '}';
     }
 }

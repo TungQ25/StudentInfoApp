@@ -8,6 +8,7 @@ import com.example.taskmanagerapp.data.local.AppDatabase;
 import com.example.taskmanagerapp.data.local.TaskDao;
 import com.example.taskmanagerapp.data.model.Task;
 import com.example.taskmanagerapp.sync.SyncManager;
+import com.example.taskmanagerapp.utils.PreferenceHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,12 +24,14 @@ public class TaskRepository {
     private static TaskRepository instance;
     private final TaskDao dao;
     private final SyncManager syncManager;
+    private final PreferenceHelper preferenceHelper;
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
 
     private TaskRepository(Context appContext) {
         AppDatabase db = AppDatabase.getInstance(appContext.getApplicationContext());
         this.dao = db.taskDao();
         this.syncManager = new SyncManager(appContext.getApplicationContext(), dao);
+        this.preferenceHelper = new PreferenceHelper(appContext.getApplicationContext());
     }
 
     /**
@@ -45,11 +48,12 @@ public class TaskRepository {
      * Luồng quan sát danh sách task; Room tự chạy truy vấn nền và phát giá trị mới khi DB đổi.
      */
     public LiveData<List<Task>> getAllTasksLive() {
-        return dao.getAllTasksLive();
+        return dao.getAllTasksLive(currentUserId());
     }
 
     public void addTask(Task task) {
         ioExecutor.execute(() -> {
+            task.setUserId(currentUserId());
             task.markLocalChange();
             dao.insert(task);
             syncManager.syncNow();
@@ -60,7 +64,7 @@ public class TaskRepository {
      * Chỉ gọi trên luồng nền (ví dụ từ {@link #ioExecutor} hoặc test).
      */
     public List<Task> getAllTasks() {
-        return new ArrayList<>(dao.getAllTasks());
+        return new ArrayList<>(dao.getAllTasks(currentUserId()));
     }
 
     /**
@@ -70,11 +74,12 @@ public class TaskRepository {
         if (id == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(dao.getTaskById(id));
+        return Optional.ofNullable(dao.getTaskById(id, currentUserId()));
     }
 
     public void updateTask(Task updatedTask) {
         ioExecutor.execute(() -> {
+            updatedTask.setUserId(currentUserId());
             updatedTask.markLocalChange();
             dao.update(updatedTask);
             syncManager.syncNow();
@@ -83,9 +88,10 @@ public class TaskRepository {
 
     public void deleteTask(String id) {
         ioExecutor.execute(() -> {
-            int updated = dao.markDeletedForSync(id, System.currentTimeMillis());
+            String userId = currentUserId();
+            int updated = dao.markDeletedForSync(id, userId, System.currentTimeMillis());
             if (updated == 0) {
-                dao.deleteById(id);
+                dao.deleteById(id, userId);
             }
             syncManager.syncNow();
         });
@@ -93,5 +99,10 @@ public class TaskRepository {
 
     public void syncTasks() {
         ioExecutor.execute(syncManager::syncNow);
+    }
+
+    private String currentUserId() {
+        String userId = preferenceHelper.getAuthUserId();
+        return userId == null ? "" : userId;
     }
 }

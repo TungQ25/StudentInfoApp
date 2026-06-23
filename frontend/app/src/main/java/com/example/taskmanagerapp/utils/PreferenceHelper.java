@@ -73,6 +73,10 @@ public class PreferenceHelper {
         return preferences.getString(KEY_AUTH_TOKEN, null);
     }
 
+    public String getAuthUserId() {
+        return preferences.getString(KEY_AUTH_USER_ID, null);
+    }
+
     public boolean hasAuthToken() {
         String token = getAuthToken();
         return token != null && !token.trim().isEmpty();

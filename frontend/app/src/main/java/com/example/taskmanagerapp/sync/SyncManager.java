@@ -63,15 +63,18 @@ public class SyncManager {
      * @throws IOException khi có lỗi kết nối mạng
      */
     private boolean pushLocalChanges() throws IOException {
-        List<Task> pendingTasks = taskDao.getPendingSyncTasks();
+        String userId = currentUserId();
+        List<Task> pendingTasks = taskDao.getPendingSyncTasks(userId);
+        Log.d(TAG, "Pending local tasks for sync: " + pendingTasks.size());
         for (Task task : pendingTasks) {
+            task.setUserId(userId);
             Response<?> response = pushTask(task); // "?" ko quan trọng trả về kiểu gì, chỉ cần kiểm tra isSuccessful()
 
             if (response.isSuccessful() || (response.code() == 404 && task.isDeleted())) {
                 if (task.isDeleted()) {
-                    taskDao.markDeletedSynced(task.getId());
+                    taskDao.markDeletedSynced(task.getId(), userId);
                 } else {
-                    taskDao.markSynced(task.getId());
+                    taskDao.markSynced(task.getId(), userId);
                 }
                 Log.d(TAG, "Synced local task " + task.getId());
             } else if (response.code() == 401) {
@@ -90,12 +93,17 @@ public class SyncManager {
 
     private Response<?> pushTask(Task task) throws IOException {
         if (task.isDeleted()) {
-            return todoApi.deleteTask(task.getId()).execute();
+            Response<Task> response = todoApi.deleteTask(task.getId()).execute();
+            Log.d(TAG, "DELETE /api/tasks/" + task.getId() + " -> " + response.code());
+            return response;
         }
 
         Response<Task> response = todoApi.updateTask(task.getId(), task).execute();
+        Log.d(TAG, "PUT /api/tasks/" + task.getId() + " -> " + response.code());
         if (response.code() == 404) {
-            return todoApi.createTask(task).execute();
+            Response<Task> createResponse = todoApi.createTask(task).execute();
+            Log.d(TAG, "POST /api/tasks -> " + createResponse.code());
+            return createResponse;
         }
         return response;
     }
@@ -106,6 +114,7 @@ public class SyncManager {
      * @throws IOException khi có lỗi kết nối mạng
      */
     private boolean pullRemoteChanges() throws IOException {
+        String userId = currentUserId();
         Response<List<Task>> response = todoApi.getAllTasks().execute();
         if (!response.isSuccessful()) {
             if (response.code() == 401) {
@@ -126,7 +135,8 @@ public class SyncManager {
         List<Task> mapped = new ArrayList<>();
         for (Task remote : remoteTasks) {
             Task task = Task.fromRemote(remote);
-            Task local = taskDao.getTaskById(task.getId());
+            task.setUserId(userId);
+            Task local = taskDao.getTaskById(task.getId(), userId);
 
             // Nếu task local đã xóa và chưa sync xóa thì không lấy task từ server xuống nữa
             if (local != null && local.isDeleted()) {
@@ -143,5 +153,10 @@ public class SyncManager {
             taskDao.upsertAll(mapped);
         }
         return true;
+    }
+
+    private String currentUserId() {
+        String userId = preferenceHelper.getAuthUserId();
+        return userId == null ? "" : userId;
     }
 }
