@@ -7,7 +7,7 @@
 
     <LinearLayout
         android:id="@+id/main_content"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="vertical"
         android:padding="@dimen/padding"
@@ -15,17 +15,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvCategories"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:paddingTop="@dimen/padding"
-            android:paddingBottom="@dimen/padding"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:listitem="@layout/list_item_category" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvTasks"
@@ -42,8 +31,7 @@
             android:text="Delete Selected"
             android:visibility="gone" />
     </LinearLayout>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+<com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnAddTask"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
