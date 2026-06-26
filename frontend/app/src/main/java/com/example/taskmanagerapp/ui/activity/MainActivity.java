@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -17,16 +17,31 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.taskmanagerapp.R;
+import com.example.taskmanagerapp.ui.fragment.HabitFragment;
+import com.example.taskmanagerapp.ui.fragment.MatrixFragment;
+import com.example.taskmanagerapp.ui.fragment.PomodoroFragment;
 import com.example.taskmanagerapp.ui.fragment.SettingsFragment;
 import com.example.taskmanagerapp.ui.fragment.TaskFragment;
 import com.example.taskmanagerapp.utils.PreferenceHelper;
 import com.google.android.material.appbar.MaterialToolbar;
 
 public class MainActivity extends AppCompatActivity {
+
+    // Giao sự kiện cho fragment xử lý
+    public interface TaskToolbarController {
+        void onToggleSidebarRequested();
+        void onToolbarMoreRequested(View anchor);
+    }
+
     private static final String STATE_SELECTED_BOTTOM_NAV_ITEM = "selectedBottomNavItem";
 
+    private View appBarLayout;
     private MaterialToolbar toolbar;
+    private TextView toolbarTitle;
+    private View toolbarSidebarButton;
+    private View toolbarMoreButton;
     private View bottomNavigation;
+    private TaskToolbarController taskToolbarController;
     private PreferenceHelper preferenceHelper;
     private String appliedTheme;
     private int selectedBottomNavItem = R.id.nav_task;
@@ -72,7 +87,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
+        appBarLayout = findViewById(R.id.appBarLayout);
         toolbar = findViewById(R.id.toolbar);
+        toolbarTitle = findViewById(R.id.tvSelectedFilter);
+        toolbarSidebarButton = findViewById(R.id.btnToggleSidebar);
+        toolbarMoreButton = findViewById(R.id.btnToolbarMore);
+        if (toolbarSidebarButton != null) {
+            toolbarSidebarButton.setOnClickListener(v -> {
+                if (taskToolbarController != null) {
+                    taskToolbarController.onToggleSidebarRequested(); // Mở sidebar
+                }
+            });
+        }
+        if (toolbarMoreButton != null) {
+            toolbarMoreButton.setOnClickListener(v -> {
+                if (taskToolbarController != null) {
+                    taskToolbarController.onToolbarMoreRequested(v); // Mở menu tùy chọn
+                }
+            });
+        }
         bottomNavigation = findViewById(R.id.bottomNavigation);
         preferenceHelper = new PreferenceHelper(this);
         appliedTheme = preferenceHelper.getTheme();
@@ -83,10 +116,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         findViewById(R.id.nav_task).setOnClickListener(v -> showSelectedFragment(R.id.nav_task));
+        findViewById(R.id.nav_matrix).setOnClickListener(v -> showSelectedFragment(R.id.nav_matrix));
         findViewById(R.id.nav_settings).setOnClickListener(v -> showSelectedFragment(R.id.nav_settings));
-        findViewById(R.id.nav_home).setOnClickListener(v -> showPendingNavigationItem());
-        findViewById(R.id.nav_matrix).setOnClickListener(v -> showPendingNavigationItem());
-        findViewById(R.id.nav_habit).setOnClickListener(v -> showPendingNavigationItem());
+        findViewById(R.id.nav_pomodoro).setOnClickListener(v -> showSelectedFragment(R.id.nav_pomodoro));
+        findViewById(R.id.nav_habit).setOnClickListener(v -> showSelectedFragment(R.id.nav_habit));
     }
 
     private void showSelectedFragment(int itemId) {
@@ -94,6 +127,12 @@ public class MainActivity extends AppCompatActivity {
         Fragment fragment;
         if (itemId == R.id.nav_settings) {
             fragment = new SettingsFragment();
+        } else if (itemId == R.id.nav_pomodoro) {
+            fragment = new PomodoroFragment();
+        } else if (itemId == R.id.nav_matrix) {
+            fragment = new MatrixFragment();
+        } else if (itemId == R.id.nav_habit) {
+            fragment = new HabitFragment();
         } else {
             fragment = new TaskFragment();
             itemId = R.id.nav_task;
@@ -106,12 +145,6 @@ public class MainActivity extends AppCompatActivity {
         applyBottomNavigationState(itemId);
     }
 
-    // Thêm đầy đủ chức năng thì bỏ đi
-    private void showPendingNavigationItem() {
-        selectBottomNavigationItem(selectedBottomNavItem);
-        Toast.makeText(this, "Đang phát triển", Toast.LENGTH_SHORT).show();
-    }
-
     private void applyBottomNavigationState(int selectedItemId) {
         selectBottomNavigationItem(selectedItemId);
         if (toolbar != null) {
@@ -121,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void selectBottomNavigationItem(int selectedItemId) {
         int[] itemIds = {
-                R.id.nav_home,
+                R.id.nav_pomodoro,
                 R.id.nav_matrix,
                 R.id.nav_task,
                 R.id.nav_habit,
