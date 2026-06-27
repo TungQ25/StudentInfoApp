@@ -5,12 +5,14 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -33,15 +35,21 @@ public class MainActivity extends AppCompatActivity {
         void onToolbarMoreRequested(View anchor);
     }
 
+    public interface HabitToolbarController {
+        void onHabitStatsRequested();
+        void onHabitFilterRequested(View anchor);
+    }
+
     private static final String STATE_SELECTED_BOTTOM_NAV_ITEM = "selectedBottomNavItem";
 
     private View appBarLayout;
     private MaterialToolbar toolbar;
     private TextView toolbarTitle;
-    private View toolbarSidebarButton;
-    private View toolbarMoreButton;
+    private ImageButton toolbarLeftButton;
+    private ImageButton toolbarRightButton;
     private View bottomNavigation;
     private TaskToolbarController taskToolbarController;
+    private HabitToolbarController habitToolbarController;
     private PreferenceHelper preferenceHelper;
     private String appliedTheme;
     private int selectedBottomNavItem = R.id.nav_task;
@@ -90,19 +98,23 @@ public class MainActivity extends AppCompatActivity {
         appBarLayout = findViewById(R.id.appBarLayout);
         toolbar = findViewById(R.id.toolbar);
         toolbarTitle = findViewById(R.id.tvSelectedFilter);
-        toolbarSidebarButton = findViewById(R.id.btnToggleSidebar);
-        toolbarMoreButton = findViewById(R.id.btnToolbarMore);
-        if (toolbarSidebarButton != null) {
-            toolbarSidebarButton.setOnClickListener(v -> {
+        toolbarLeftButton = findViewById(R.id.btnToggleSidebar);
+        toolbarRightButton = findViewById(R.id.btnToolbarMore);
+        if (toolbarLeftButton != null) {
+            toolbarLeftButton.setOnClickListener(v -> {
                 if (taskToolbarController != null) {
                     taskToolbarController.onToggleSidebarRequested(); // Mở sidebar
+                } else if (habitToolbarController != null) {
+                    habitToolbarController.onHabitStatsRequested();
                 }
             });
         }
-        if (toolbarMoreButton != null) {
-            toolbarMoreButton.setOnClickListener(v -> {
+        if (toolbarRightButton != null) {
+            toolbarRightButton.setOnClickListener(v -> {
                 if (taskToolbarController != null) {
                     taskToolbarController.onToolbarMoreRequested(v); // Mở menu tùy chọn
+                } else if (habitToolbarController != null) {
+                    habitToolbarController.onHabitFilterRequested(v);
                 }
             });
         }
@@ -145,10 +157,121 @@ public class MainActivity extends AppCompatActivity {
         applyBottomNavigationState(itemId);
     }
 
+    /**
+     * Cập nhật trạng thái thanh điều hướng bên dưới.
+     * @param selectedItemId
+     */
     private void applyBottomNavigationState(int selectedItemId) {
         selectBottomNavigationItem(selectedItemId);
+    }
+
+    /**
+     * Hiển thị toolbar đơn giản chỉ có tiêu đề, ẩn các nút chức năng.
+     * @param title Tiêu đề hiển thị trên toolbar
+     */
+    public void showSimpleToolbar(String title) {
+        taskToolbarController = null;
+        habitToolbarController = null;
+        configureToolbar(
+                title,
+                R.drawable.ic_hamburger_large,
+                R.string.toggle_sidebar,
+                View.INVISIBLE,
+                R.drawable.ic_more_horizontal,
+                R.string.toolbar_more_options,
+                View.INVISIBLE
+        );
+    }
+
+    public void showHabitToolbar(HabitToolbarController controller) {
+        taskToolbarController = null;
+        habitToolbarController = controller;
+        configureToolbar(
+                getString(R.string.title_habit),
+                R.drawable.ic_habit_stats,
+                R.string.habit_stats,
+                View.VISIBLE,
+                R.drawable.ic_habit_sliders,
+                R.string.habit_filter,
+                View.VISIBLE
+        );
+    }
+
+    public void showTaskToolbar(String title, TaskToolbarController controller) {
+        taskToolbarController = controller;
+        habitToolbarController = null;
+        configureToolbar(
+                title,
+                R.drawable.ic_hamburger_large,
+                R.string.toggle_sidebar,
+                View.VISIBLE,
+                R.drawable.ic_more_horizontal,
+                R.string.toolbar_more_options,
+                View.VISIBLE
+        );
+    }
+
+    public void showMatrixToolbar(String title, TaskToolbarController controller) {
+        taskToolbarController = controller;
+        habitToolbarController = null;
+        configureToolbar(
+                title,
+                R.drawable.ic_hamburger_large,
+                R.string.toggle_sidebar,
+                View.INVISIBLE,
+                R.drawable.ic_more_horizontal,
+                R.string.toolbar_more_options,
+                View.VISIBLE
+        );
+    }
+
+    public void setTaskToolbarTitle(String title) {
+        if (toolbarTitle != null) {
+            toolbarTitle.setText(title == null || title.trim().isEmpty() ? "All" : title);
+        }
+    }
+
+    public void clearTaskToolbarController(TaskToolbarController controller) {
+        if (taskToolbarController == controller) {
+            taskToolbarController = null;
+        }
+    }
+
+    public void clearHabitToolbarController(HabitToolbarController controller) {
+        if (habitToolbarController == controller) {
+            habitToolbarController = null;
+        }
+    }
+
+    private void configureToolbar(String title,
+                                  int leftIconRes,
+                                  int leftDescriptionRes,
+                                  int leftVisibility,
+                                  int rightIconRes,
+                                  int rightDescriptionRes,
+                                  int rightVisibility) {
+        showMainToolbar();
         if (toolbar != null) {
-            toolbar.setTitle(selectedItemId == R.id.nav_settings ? R.string.title_settings : R.string.title_main);
+            toolbar.setTitle("");
+        }
+        setToolbarButton(toolbarLeftButton, leftIconRes, leftDescriptionRes, leftVisibility);
+        setToolbarButton(toolbarRightButton, rightIconRes, rightDescriptionRes, rightVisibility);
+        setTaskToolbarTitle(title);
+    }
+
+    private void setToolbarButton(ImageButton button, int iconRes, int descriptionRes, int visibility) {
+        if (button == null) {
+            return;
+        }
+        button.setImageResource(iconRes);
+        button.setColorFilter(ContextCompat.getColor(this, R.color.colorOnPrimary));
+        button.setContentDescription(getString(descriptionRes));
+        button.setVisibility(visibility);
+    }
+
+    private void showMainToolbar() {
+        if (appBarLayout != null) {
+            appBarLayout.setVisibility(View.VISIBLE);
         }
     }
 
