@@ -5,13 +5,15 @@ public final class TaskContract {
     public static final String DATABASE_NAME = "student_tasks.db";
 
     public static final String TABLE_TASKS = "tasks";
+    public static final String TABLE_CATEGORIES = "categories";
 
     public static final String COL_ID = "id";
     public static final String COL_TITLE = "title";
     public static final String COL_DESCRIPTION = "description";
-    public static final String COL_CATEGORY = "category";
+    public static final String COL_CATEGORY_ID = "category_id";
     public static final String COL_DEADLINE = "deadline";
     public static final String COL_COMPLETED = "is_completed";
+    public static final String COL_WONT_DO = "wont_do";
     public static final String COL_PRIORITY = "priority";
     public static final String COL_IMAGE_PATH = "image_path";
     public static final String COL_UPDATED_AT = "updated_at";

@@ -3,7 +3,10 @@ package com.example.taskmanagerapp.sync;
 import android.content.Context;
 import android.util.Log;
 
+import com.example.taskmanagerapp.data.local.AppDatabase;
+import com.example.taskmanagerapp.data.local.CategoryDao;
 import com.example.taskmanagerapp.data.local.TaskDao;
+import com.example.taskmanagerapp.data.model.Category;
 import com.example.taskmanagerapp.data.model.Task;
 import com.example.taskmanagerapp.data.remote.RetrofitClient;
 import com.example.taskmanagerapp.data.remote.TodoApi;
@@ -21,12 +24,16 @@ public class SyncManager {
 
     private final Context appContext;
     private final TaskDao taskDao;
+    private final CategoryDao categoryDao;
     private final TodoApi todoApi;
     private final PreferenceHelper preferenceHelper;
 
-    public SyncManager(Context context, TaskDao taskDao) {
+    public SyncManager(Context context) {
         this.appContext = context.getApplicationContext();
         this.taskDao = taskDao;
+        AppDatabase db = AppDatabase.getInstance(this.appContext);
+        this.taskDao = db.taskDao();
+        this.categoryDao = db.categoryDao();
         this.todoApi = RetrofitClient.getTodoApi();
         this.preferenceHelper = new PreferenceHelper(this.appContext);
     }
@@ -51,10 +58,54 @@ public class SyncManager {
                 return false;
             }
             return pullRemoteChanges(); // xử lý local xong thì mới pull dữ liệu từ sv về
+            if (!pushLocalCategoryChanges()) return false;
+            if (!pushLocalTaskChanges()) return false;
+            if (!pullRemoteCategories()) return false;
+            if (!pullRemoteTasks()) return false;
         } catch (IOException e) {
             Log.e(TAG, "Sync failed with network/server error", e);
             return false;
         }
+    }
+
+    private boolean pushLocalCategoryChanges() throws IOException {
+        String userId = currentUserId();
+        List<Category> pendingCategories = categoryDao.getPendingSyncCategories(userId);
+        Log.d(TAG, "Pending local categories for sync: " + pendingCategories.size());
+        for (Category category : pendingCategories) {
+            category.setUserId(userId);
+            Response<?> response = pushCategory(category);
+            if (response.isSuccessful() || (response.code() == 404 && category.isDeleted())) {
+                if (category.isDeleted()) {
+                    categoryDao.markDeletedSynced(category.getId(), userId);
+                } else {
+                    categoryDao.markSynced(category.getId(), userId);
+                }
+            } else if (response.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            } else if (response.code() >= 500) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Response<?> pushCategory(Category category) throws IOException {
+        if (category.isDeleted()) {
+            Response<Category> response = todoApi.deleteCategory(category.getId()).execute();
+            Log.d(TAG, "DELETE /api/categories/" + category.getId() + " -> " + response.code());
+            return response;
+        }
+
+        Response<Category> response = todoApi.updateCategory(category.getId(), category).execute();
+        Log.d(TAG, "PUT /api/categories/" + category.getId() + " -> " + response.code());
+        if (response.code() == 404) {
+            Response<Category> createResponse = todoApi.createCategory(category).execute();
+            Log.d(TAG, "POST /api/categories -> " + createResponse.code());
+            return createResponse;
+        }
+        return response;
     }
 
     /**
@@ -62,7 +113,7 @@ public class SyncManager {
      * @return true nếu đẩy thành công tất cả hoặc lỗi không nghiêm trọng, false nếu cần retry
      * @throws IOException khi có lỗi kết nối mạng
      */
-    private boolean pushLocalChanges() throws IOException {
+    private boolean pushLocalTaskChanges() throws IOException {
         String userId = currentUserId();
         List<Task> pendingTasks = taskDao.getPendingSyncTasks(userId);
         Log.d(TAG, "Pending local tasks for sync: " + pendingTasks.size());
@@ -76,16 +127,11 @@ public class SyncManager {
                 } else {
                     taskDao.markSynced(task.getId(), userId);
                 }
-                Log.d(TAG, "Synced local task " + task.getId());
             } else if (response.code() == 401) {
-                Log.w(TAG, "Authorization failed while syncing task " + task.getId());
                 preferenceHelper.clearAuth();
                 return false;
             } else if (response.code() >= 500) {
-                Log.w(TAG, "Server error while syncing task " + task.getId() + ": " + response.code());
                 return false;
-            } else {
-                Log.w(TAG, "Unhandled sync response " + response.code() + " for task " + task.getId());
             }
         }
         return true;
@@ -109,37 +155,110 @@ public class SyncManager {
     }
 
     /**
-     * Lấy dữ liệu từ server về và cập nhật vào local database
+     * Lấy dữ liệu Categories từ server về và cập nhật vào local database
      * @return true nếu thành công hoặc không có dữ liệu mới, false nếu cần thử lại sau
      * @throws IOException khi có lỗi kết nối mạng
      */
-    private boolean pullRemoteChanges() throws IOException {
+    private boolean pullRemoteCategories() throws IOException {
         String userId = currentUserId();
-        Response<List<Task>> response = todoApi.getAllTasks().execute();
+        Response<List<Category>> response = todoApi.getAllCategories().execute();
         if (!response.isSuccessful()) {
             if (response.code() == 401) {
-                Log.w(TAG, "Authorization failed while fetching tasks");
                 preferenceHelper.clearAuth();
                 return false;
             }
-            Log.w(TAG, "Fetch tasks failed with response " + response.code());
             return response.code() < 500;
         }
 
-        // Ko có dữ liệu gì thì ko có gì để cập nhật -> true
-        List<Task> remoteTasks = response.body();
-        if (remoteTasks == null) {
-            return true;
+        List<Category> remoteCategories = response.body();
+        List<Category> mapped = new ArrayList<>();
+        if (remoteCategories != null) {
+            for (Category remote : remoteCategories) {
+                Category category = Category.fromRemote(remote);
+                category.setUserId(userId);
+                Category local = categoryDao.getCategoryById(category.getId(), userId);
+
+                // Local đã xóa nhưng chưa sync -> không lấy bản remote về đè lên
+                if (local != null && !local.isSynced() && local.isDeleted()) {
+                    continue;
+                }
+                // Local có thay đổi mới hơn và chưa sync -> giữ bản local
+                if (local != null && !local.isSynced() && local.getUpdatedAt() > category.getUpdatedAt()) {
+                    continue;
+                }
+                mapped.add(category);
+            }
+        }
+        if (!mapped.isEmpty()) {
+            categoryDao.upsertAll(mapped);
+        }
+        return true;
+    }
+
+    /**
+     * Lấy dữ liệu Task từ server về và cập nhật vào local database
+     * @return true nếu thành công hoặc không có dữ liệu mới, false nếu cần thử lại sau
+     * @throws IOException khi có lỗi kết nối mạng
+    */
+    private boolean pullRemoteTasks() throws IOException {
+        String userId = currentUserId();
+        Response<List<Task>> activeResponse = todoApi.getAllTasks().execute();
+        if (!activeResponse.isSuccessful()) {
+            if (activeResponse.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            }
+            return activeResponse.code() < 500;
+        }
+
+       Response<List<Task>> trashResponse = todoApi.getTrashTasks().execute();
+        if (!trashResponse.isSuccessful()) {
+            if (trashResponse.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            }
+            return trashResponse.code() < 500;
         }
 
         List<Task> mapped = new ArrayList<>();
-        for (Task remote : remoteTasks) {
-            Task task = Task.fromRemote(remote);
-            task.setUserId(userId);
-            Task local = taskDao.getTaskById(task.getId(), userId);
+
+        List<Task> activeTasks = activeResponse.body();
+        if (activeTasks != null) {
+            for (Task remote : activeTasks) {
+                Task task = Task.fromRemote(remote);
+                task.setUserId(userId);
+                task.setDeleted(false);
+                addRemoteTaskForUpsert(userId, mapped, task);
+            }
+        }
+
+        // Xử lý danh sách task trong thùng rác lấy từ server rồi ghi vào Room
+        List<Task> trashTasks = trashResponse.body();
+        List<String> remoteTrashIds = new ArrayList<>();
+        if (trashTasks != null) {
+            for (Task remote : trashTasks) {
+                Task task = Task.fromRemote(remote);
+                task.setUserId(userId);
+                task.setDeleted(true);
+                remoteTrashIds.add(task.getId());
+                addRemoteTaskForUpsert(userId, mapped, task);
+            }
+        }
+
+        if (!mapped.isEmpty()) {
+            taskDao.upsertAll(mapped);
+        }
 
             // Nếu task local đã xóa và chưa sync xóa thì không lấy task từ server xuống nữa
             if (local != null && local.isDeleted()) {
+        if (remoteTrashIds.isEmpty()) {
+            taskDao.deleteAllSyncedTrash(userId);
+        } else {
+            taskDao.deleteSyncedTrashNotIn(userId, remoteTrashIds);
+        }
+
+        return true;
+    }
                 continue;
             }
             // Nếu task local mới hơn remote và chưa sync thì không ghi đè bằng dữ liệu cũ từ server
@@ -153,6 +272,25 @@ public class SyncManager {
             taskDao.upsertAll(mapped);
         }
         return true;
+    }
+
+    private void addRemoteTaskForUpsert(String userId, List<Task> mapped, Task task) {
+        if (task == null) {
+            return;
+        }
+        Task local = taskDao.getTaskById(task.getId(), userId);
+
+        // Local đã xóa nhưng chưa sync -> không lấy bản remote về đè lên
+        if (local != null && !local.isSynced() && local.isDeleted()) {
+            return;
+        }
+
+        // Local có thay đổi mới hơn và chưa sync -> giữ bản local
+        if (local != null && !local.isSynced() && local.getUpdatedAt() > task.getUpdatedAt()) {
+            return;
+        }
+
+        mapped.add(task);
     }
 
     private String currentUserId() {

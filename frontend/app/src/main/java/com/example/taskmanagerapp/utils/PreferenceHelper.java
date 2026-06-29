@@ -15,6 +15,9 @@ public class PreferenceHelper {
     public static final String KEY_AUTH_USER_ID = "auth_user_id";
     public static final String KEY_AUTH_USERNAME = "auth_username";
     public static final String KEY_AUTH_EMAIL = "auth_email";
+    public static final String KEY_SELECTED_TASK_FILTER_ID = "selected_task_filter_id";
+    public static final String KEY_SELECTED_TASK_FILTER_TITLE = "selected_task_filter_title";
+    public static final String KEY_TASK_EMPTY_TRASH_PENDING = "task_empty_trash_pending";
     public static final String THEME_LIGHT = "light";
     public static final String THEME_DARK = "dark";
     public static final String THEME_SYSTEM = "system";
@@ -59,6 +62,32 @@ public class PreferenceHelper {
         return value;
     }
 
+
+    public void setSelectedTaskFilter(String filterId, String title) {
+        preferences.edit()
+                .putString(KEY_SELECTED_TASK_FILTER_ID, filterId)
+                .putString(KEY_SELECTED_TASK_FILTER_TITLE, title)
+                .apply();
+        Log.d(TAG, "setSelectedTaskFilter -> " + filterId + ", " + title);
+    }
+
+    public String getSelectedTaskFilterId() {
+        return preferences.getString(KEY_SELECTED_TASK_FILTER_ID, null);
+    }
+
+    public String getSelectedTaskFilterTitle() {
+        return preferences.getString(KEY_SELECTED_TASK_FILTER_TITLE, null);
+    }
+
+    public void setSidebarSystemFilterOrder(String order) {
+        preferences.edit().putString(KEY_SIDEBAR_SYSTEM_FILTER_ORDER, order).apply();
+        Log.d(TAG, "setSidebarSystemFilterOrder -> " + order);
+    }
+
+    public String getSidebarSystemFilterOrder() {
+        return preferences.getString(KEY_SIDEBAR_SYSTEM_FILTER_ORDER, null);
+    }
+
     public void saveAuth(String token, String userId, String username, String email) {
         preferences.edit()
                 .putString(KEY_AUTH_TOKEN, token)
@@ -77,9 +106,26 @@ public class PreferenceHelper {
         return preferences.getString(KEY_AUTH_USER_ID, null);
     }
 
+    public String getAuthUsername() {
+        return preferences.getString(KEY_AUTH_USERNAME, null);
+    }
+
+    public String getAuthEmail() {
+        return preferences.getString(KEY_AUTH_EMAIL, null);
+    }
+
     public boolean hasAuthToken() {
         String token = getAuthToken();
         return token != null && !token.trim().isEmpty();
+    }
+
+    public boolean isTaskEmptyTrashPending() {
+        return preferences.getBoolean(KEY_TASK_EMPTY_TRASH_PENDING, false);
+    }
+
+    public void setTaskEmptyTrashPending(boolean pending) {
+        preferences.edit().putBoolean(KEY_TASK_EMPTY_TRASH_PENDING, pending).apply();
+        Log.d(TAG, "setTaskEmptyTrashPending -> " + pending);
     }
 
     public void clearAuth() {
@@ -97,6 +143,8 @@ public class PreferenceHelper {
                 .putString(KEY_THEME, "system")
                 .putBoolean(KEY_NOTIFICATIONS_ENABLED, true)
                 .putString(KEY_SORT_BY, "deadline")
+                .remove(KEY_SIDEBAR_SMART_FILTER_ORDER)
+                .remove(KEY_SIDEBAR_SYSTEM_FILTER_ORDER)
                 .apply();
         Log.d(TAG, "resetToDefault -> theme=system, notifications=true, sort_by=deadline");
     }

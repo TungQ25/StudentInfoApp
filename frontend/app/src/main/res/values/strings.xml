@@ -31,4 +31,6 @@
     <string name="task_attachment_pick">CHỌN ẢNH</string>
     <string name="task_attachment_remove">XOÁ ẢNH</string>
     <string name="task_attachment_save_failed">Không lưu được ảnh</string>
+    <string name="toggle_sidebar">Toggle sidebar</string>
+    <string name="toolbar_more_options">More options</string>
 </resources>
