@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">TaskManagerApp</string>
-    <string name="nav_home">Trang chủ</string>
+    <string name="nav_pomodoro">Pomodoro</string>
     <string name="nav_matrix">Matrix</string>
     <string name="nav_task">Task</string>
     <string name="nav_habit">Habit</string>

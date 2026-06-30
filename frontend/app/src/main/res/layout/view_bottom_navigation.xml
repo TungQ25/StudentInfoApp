@@ -9,7 +9,7 @@
     android:orientation="horizontal">
 
     <LinearLayout
-        android:id="@+id/nav_home"
+        android:id="@+id/nav_pomodoro"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
@@ -24,9 +24,9 @@
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:contentDescription="@string/nav_home"
+            android:contentDescription="@string/nav_pomodoro"
             android:duplicateParentState="true"
-            android:src="@drawable/ic_nav_home"
+            android:src="@drawable/ic_nav_pomodoro"
             app:tint="@color/bottom_nav_item_color" />
     </LinearLayout>
 
