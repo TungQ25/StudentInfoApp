@@ -1,11 +1,10 @@
 package com.example.taskmanagerapp.ui.activity;
 
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -26,12 +25,20 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.taskmanagerapp.R;
+import com.example.taskmanagerapp.data.model.Category;
 import com.example.taskmanagerapp.utils.ImageStorageHelper;
+import com.example.taskmanagerapp.viewmodel.CategoryViewModel;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
 
 public class AddTaskActivity extends AppCompatActivity {
-    private static final String TAG = "AddTaskLifecycle";
     public static final String EXTRA_IMAGE_PATH = "imagePath";
 
     EditText edtTitle, edtDescription, edtDeadline;
@@ -44,24 +51,21 @@ public class AddTaskActivity extends AppCompatActivity {
     int position = -1;
     String id = null;
     boolean isCompleted = false;
+    boolean wontDo = false;
+    String selectedCategoryId = null;
 
     ImageStorageHelper storage;
-
-    /** Tên file ảnh khi vào activity (null nếu không có ảnh). */
+    CategoryViewModel categoryViewModel;
+    ArrayAdapter<CategoryOption> categoryAdapter;
+    final List<CategoryOption> categoryOptions = new ArrayList<>();
     String originalImageFile = null;
-    /** File ảnh hiện tại được hiển thị / sẽ được lưu vào task. */
     String currentImageFile = null;
-    /** Files được chọn trong session này cần được xóa nếu người dùng thoát. */
-    final java.util.List<String> sessionFiles = new java.util.ArrayList<>();
-
+    final List<String> sessionFiles = new ArrayList<>();
     ActivityResultLauncher<PickVisualMediaRequest> pickImageLauncher;
-
-    String[] categories = {"Homework", "Project", "Exam"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate: Activity Created");
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_add_task);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -71,6 +75,7 @@ public class AddTaskActivity extends AppCompatActivity {
         });
 
         storage = new ImageStorageHelper(this);
+        categoryViewModel = new ViewModelProvider(this).get(CategoryViewModel.class);
 
         edtTitle = findViewById(R.id.edtTitle);
         edtDescription = findViewById(R.id.edtDescription);
@@ -82,64 +87,19 @@ public class AddTaskActivity extends AppCompatActivity {
         btnRemoveAttachment = findViewById(R.id.btnRemoveAttachment);
         ivAttachment = findViewById(R.id.ivAttachment);
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, categories);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerCategory.setAdapter(adapter);
+        categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categoryOptions);
+        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerCategory.setAdapter(categoryAdapter);
+        observeCategories();
 
-        if (savedInstanceState != null) {
-            isEdit = savedInstanceState.getBoolean("isEdit");
-            position = savedInstanceState.getInt("position");
-            id = savedInstanceState.getString("id");
-            isCompleted = savedInstanceState.getBoolean("isCompleted");
-            originalImageFile = savedInstanceState.getString("originalImageFile");
-            currentImageFile = savedInstanceState.getString("currentImageFile");
-            java.util.ArrayList<String> sf = savedInstanceState.getStringArrayList("sessionFiles");
-            if (sf != null) sessionFiles.addAll(sf);
-            updateAttachmentUi();
-        } else {
-            Intent intent = getIntent();
-            if (intent != null) {
-                isEdit = intent.getBooleanExtra("isEdit", false);
-                position = intent.getIntExtra("position", -1);
-                id = intent.getStringExtra("id");
-                String category = intent.getStringExtra("category");
+        restoreStateOrIntent(savedInstanceState);
 
-                if (isEdit) {
-                    edtTitle.setText(intent.getStringExtra("title"));
-                    edtDescription.setText(intent.getStringExtra("description"));
-                    edtDeadline.setText(intent.getStringExtra("deadline"));
-                    isCompleted = intent.getBooleanExtra("completed", false);
-
-                    selectCategory(category);
-
-                    String priority = intent.getStringExtra("priority");
-                    if ("Low".equals(priority)) rgPriority.check(R.id.rbLow);
-                    else if ("Medium".equals(priority)) rgPriority.check(R.id.rbMedium);
-                    else if ("High".equals(priority)) rgPriority.check(R.id.rbHigh);
-
-                    originalImageFile = intent.getStringExtra(EXTRA_IMAGE_PATH);
-                    currentImageFile = originalImageFile;
-                    updateAttachmentUi();
-                } else {
-                    selectCategory(category);
-                }
-            }
-        }
-
-        pickImageLauncher = registerForActivityResult(
-                new ActivityResultContracts.PickVisualMedia(), this::onPickedImage);
-
-        btnPickAttachment.setOnClickListener(v -> pickImageLauncher.launch(
-                new PickVisualMediaRequest.Builder()
-                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
-                        .build()));
-
+        pickImageLauncher = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), this::onPickedImage);
+        btnPickAttachment.setOnClickListener(v -> pickImageLauncher.launch(new PickVisualMediaRequest.Builder().setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
         btnRemoveAttachment.setOnClickListener(v -> removeCurrentAttachment());
-
-        btnSave.setOnClickListener(v -> {
-            saveTask();
-        });
+        edtDeadline.setFocusable(false);
+        edtDeadline.setOnClickListener(v -> showDatePicker());
+        btnSave.setOnClickListener(v -> saveTask());
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -149,6 +109,96 @@ public class AddTaskActivity extends AppCompatActivity {
                 getOnBackPressedDispatcher().onBackPressed();
             }
         });
+    }
+
+    /**
+     * khôi phục dữ liệu cho màn hình Add/Edit Task
+     * @param savedInstanceState
+     */
+    private void restoreStateOrIntent(Bundle savedInstanceState) {
+        // Load lại dữ liệu khi hệ thống bị tạo lại
+        if (savedInstanceState != null) {
+            isEdit = savedInstanceState.getBoolean("isEdit");
+            position = savedInstanceState.getInt("position");
+            id = savedInstanceState.getString("id");
+            isCompleted = savedInstanceState.getBoolean("isCompleted");
+            wontDo = savedInstanceState.getBoolean("wontDo");
+            selectedCategoryId = savedInstanceState.getString("selectedCategoryId");
+            originalImageFile = savedInstanceState.getString("originalImageFile");
+            currentImageFile = savedInstanceState.getString("currentImageFile");
+            ArrayList<String> sf = savedInstanceState.getStringArrayList("sessionFiles");
+            if (sf != null) sessionFiles.addAll(sf);
+            updateAttachmentUi();
+            return;
+        }
+
+        // Load dữ liệu từ Intent khi mở màn hình lần đầu
+        Intent intent = getIntent();
+        if (intent == null) return;
+        isEdit = intent.getBooleanExtra("isEdit", false);
+        position = intent.getIntExtra("position", -1);
+        id = intent.getStringExtra("id");
+        selectedCategoryId = intent.getStringExtra("categoryId");
+        wontDo = intent.getBooleanExtra("wontDo", false);
+        String deadline = intent.getStringExtra("deadline");
+
+        // Sửa task thì load dữ liệu cũ lên form
+        if (isEdit) {
+            edtTitle.setText(intent.getStringExtra("title"));
+            edtDescription.setText(intent.getStringExtra("description"));
+            edtDeadline.setText(deadline);
+            isCompleted = intent.getBooleanExtra("completed", false);
+            String priority = intent.getStringExtra("priority");
+            if ("High".equals(priority)) rgPriority.check(R.id.rbHigh);
+            else if ("Medium".equals(priority)) rgPriority.check(R.id.rbMedium);
+            else if ("Low".equals(priority)) rgPriority.check(R.id.rbLow);
+            else rgPriority.check(R.id.rbNone);
+            originalImageFile = intent.getStringExtra(EXTRA_IMAGE_PATH);
+            currentImageFile = originalImageFile;
+            updateAttachmentUi();
+        } else if (deadline != null) {
+            edtDeadline.setText(deadline);
+        }
+    }
+
+    /**
+     * Tự động cập nhật khi category thay đổi
+     */
+    private void observeCategories() {
+        categoryViewModel.getCategories().observe(this, categories -> {
+            categoryOptions.clear();
+            categoryOptions.add(new CategoryOption(null, "Inbox"));
+            if (categories != null) {
+                for (Category category : categories) {
+                    categoryOptions.add(new CategoryOption(category.getId(), category.getName()));
+                }
+            }
+            categoryAdapter.notifyDataSetChanged();
+            selectCategoryId(selectedCategoryId);
+        });
+    }
+
+    private void selectCategoryId(String categoryId) {
+        for (int i = 0; i < categoryOptions.size(); i++) {
+            CategoryOption option = categoryOptions.get(i);
+            if ((categoryId == null && option.id == null) || (categoryId != null && categoryId.equals(option.id))) {
+                spinnerCategory.setSelection(i);
+                return;
+            }
+        }
+        spinnerCategory.setSelection(0);
+    }
+
+    /**
+     * Mở hộp thoại chọn ngày
+     */
+    private void showDatePicker() {
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            calendar.set(year, month, dayOfMonth);
+            edtDeadline.setText(new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.getTime()));
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+        dialog.show();
     }
 
     private void onPickedImage(Uri uri) {
@@ -166,18 +216,6 @@ public class AddTaskActivity extends AppCompatActivity {
     private void removeCurrentAttachment() {
         currentImageFile = null;
         updateAttachmentUi();
-    }
-
-    private void selectCategory(String category) {
-        if (category == null) {
-            return;
-        }
-        for (int i = 0; i < categories.length; i++) {
-            if (categories[i].equals(category)) {
-                spinnerCategory.setSelection(i);
-                break;
-            }
-        }
     }
 
     private void updateAttachmentUi() {
@@ -201,11 +239,12 @@ public class AddTaskActivity extends AppCompatActivity {
         String title = edtTitle.getText().toString().trim();
         String description = edtDescription.getText().toString().trim();
         String deadline = edtDeadline.getText().toString().trim();
-        String category = spinnerCategory.getSelectedItem().toString();
+        CategoryOption option = (CategoryOption) spinnerCategory.getSelectedItem();
+        String categoryId = option == null ? null : option.id;
 
         int selectedPriorityId = rgPriority.getCheckedRadioButtonId();
         RadioButton rbSelected = findViewById(selectedPriorityId);
-        String priority = rbSelected.getText().toString();
+        String priority = rbSelected == null ? "None" : rbSelected.getText().toString();
 
         // Files được chọn trong session nhưng không được chọn (ví dụ người dùng chọn rồi chọn
         // ảnh khác, hoặc nhấn Xóa) -> xóa để tránh orphan trong storage.
@@ -219,10 +258,11 @@ public class AddTaskActivity extends AppCompatActivity {
         resultIntent.putExtra("id", id);
         resultIntent.putExtra("title", title);
         resultIntent.putExtra("description", description);
-        resultIntent.putExtra("category", category);
+        resultIntent.putExtra("categoryId", categoryId);
         resultIntent.putExtra("deadline", deadline);
         resultIntent.putExtra("priority", priority);
         resultIntent.putExtra("completed", isCompleted);
+        resultIntent.putExtra("wontDo", wontDo);
         resultIntent.putExtra("isEdit", isEdit);
         resultIntent.putExtra("position", position);
         resultIntent.putExtra(EXTRA_IMAGE_PATH, currentImageFile);
@@ -246,12 +286,34 @@ public class AddTaskActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
+        CategoryOption option = (CategoryOption) spinnerCategory.getSelectedItem();
         outState.putBoolean("isEdit", isEdit);
         outState.putInt("position", position);
         outState.putString("id", id);
         outState.putBoolean("isCompleted", isCompleted);
+        outState.putBoolean("wontDo", wontDo);
+        outState.putString("selectedCategoryId", option == null ? selectedCategoryId : option.id);
         outState.putString("originalImageFile", originalImageFile);
         outState.putString("currentImageFile", currentImageFile);
-        outState.putStringArrayList("sessionFiles", new java.util.ArrayList<>(sessionFiles));
+        outState.putStringArrayList("sessionFiles", new ArrayList<>(sessionFiles));
+    }
+
+    /**
+     * Dùng làm item cho Spinner chọn category
+     */
+    static class CategoryOption {
+        final String id;
+        final String name;
+
+        CategoryOption(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 }
