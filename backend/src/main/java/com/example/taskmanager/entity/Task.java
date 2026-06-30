@@ -98,10 +98,7 @@ public class Task {
     }
 
     public void setCompleted(boolean completed) {
-        this.completed = completed;
-        if (completed) {
-            wontDo = false;
-        }
+        this.completed = completed; if (completed) this.wontDo = false;
     }
 
     public boolean isWontDo() {
@@ -109,10 +106,7 @@ public class Task {
     }
 
     public void setWontDo(boolean wontDo) {
-        this.wontDo = wontDo;
-        if (wontDo) {
-            completed = false;
-        }
+        this.wontDo = wontDo; if (wontDo) this.completed = false;
     }
 
     public String getPriority() {
