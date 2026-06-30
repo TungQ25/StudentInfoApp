@@ -12,8 +12,7 @@ import com.example.taskmanagerapp.data.model.Category;
 import com.example.taskmanagerapp.data.model.Habit;
 import com.example.taskmanagerapp.data.model.HabitCompletion;
 
-@Database(entities = {Task.class}, version = 1, exportSchema = false)
-@Database(entities = {Task.class, Category.class}, version = 1, exportSchema = false)
+@Database(entities = {Task.class, Category.class, Habit.class, HabitCompletion.class}, version = 1, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static final String DB_NAME = TaskContract.DATABASE_NAME;
@@ -22,6 +21,10 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract TaskDao taskDao();
 
     public abstract CategoryDao categoryDao();
+
+    public abstract HabitDao habitDao();
+
+    public abstract HabitCompletionDao habitCompletionDao();
 
     public static AppDatabase getInstance(Context context) {
         if (instance == null) {

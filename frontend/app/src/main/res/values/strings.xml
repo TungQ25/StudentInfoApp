@@ -6,7 +6,12 @@
     <string name="nav_habit">Habit</string>
     <string name="nav_settings">Cài đặt</string>
     <string name="add_task">Add Task</string>
-    <string name="title_main">Tasks Manager</string>
+    <string name="title_habit">Habit</string>
+    <string name="title_pomodoro">Study Pomodoro</string>
+    <string name="habit_add">Thêm habit</string>
+    <string name="habit_filter">Lọc habit</string>
+    <string name="habit_stats">Thống kê habit</string>
+    <string name="habit_empty">Chưa có habit trong bộ lọc này</string>
     <string name="title_task_detail">Task Details</string>
     <string name="title_matrix">Eisenhower Matrix</string>
     <string name="title_add_task">Thêm công việc</string>

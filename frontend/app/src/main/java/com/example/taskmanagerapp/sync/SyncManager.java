@@ -5,8 +5,12 @@ import android.util.Log;
 
 import com.example.taskmanagerapp.data.local.AppDatabase;
 import com.example.taskmanagerapp.data.local.CategoryDao;
+import com.example.taskmanagerapp.data.local.HabitCompletionDao;
+import com.example.taskmanagerapp.data.local.HabitDao;
 import com.example.taskmanagerapp.data.local.TaskDao;
 import com.example.taskmanagerapp.data.model.Category;
+import com.example.taskmanagerapp.data.model.Habit;
+import com.example.taskmanagerapp.data.model.HabitCompletion;
 import com.example.taskmanagerapp.data.model.Task;
 import com.example.taskmanagerapp.data.remote.RetrofitClient;
 import com.example.taskmanagerapp.data.remote.TodoApi;
@@ -25,15 +29,18 @@ public class SyncManager {
     private final Context appContext;
     private final TaskDao taskDao;
     private final CategoryDao categoryDao;
+    private final HabitDao habitDao;
+    private final HabitCompletionDao habitCompletionDao;
     private final TodoApi todoApi;
     private final PreferenceHelper preferenceHelper;
 
     public SyncManager(Context context) {
         this.appContext = context.getApplicationContext();
-        this.taskDao = taskDao;
         AppDatabase db = AppDatabase.getInstance(this.appContext);
         this.taskDao = db.taskDao();
         this.categoryDao = db.categoryDao();
+        this.habitDao = db.habitDao();
+        this.habitCompletionDao = db.habitCompletionDao();
         this.todoApi = RetrofitClient.getTodoApi();
         this.preferenceHelper = new PreferenceHelper(this.appContext);
     }
@@ -56,13 +63,13 @@ public class SyncManager {
             if (!pushPendingPermanentTaskDeletes()) return false;
             if (!pushLocalCategoryChanges()) return false;
             if (!pushLocalTaskChanges()) return false;
-            if (!pushLocalHabitChanges()) return false; // commit sau
-            if (!pushLocalHabitCompletionChanges()) return false; // commit sau
+            if (!pushLocalHabitChanges()) return false;
+            if (!pushLocalHabitCompletionChanges()) return false;
             if (!pullRemoteCategories()) return false;
             if (!flushPendingEmptyTrash()) return false;
             if (!pullRemoteTasks()) return false;
-            if (!pullRemoteHabits()) return false; // commit sau
-            return pullRemoteHabitCompletions(); // commit sau
+            if (!pullRemoteHabits()) return false;
+            return pullRemoteHabitCompletions();
         } catch (IOException e) {
             Log.e(TAG, "Sync failed with network/server error", e);
             return false;
@@ -335,8 +342,6 @@ public class SyncManager {
             taskDao.upsertAll(mapped);
         }
 
-            // Nếu task local đã xóa và chưa sync xóa thì không lấy task từ server xuống nữa
-            if (local != null && local.isDeleted()) {
         if (remoteTrashIds.isEmpty()) {
             taskDao.deleteAllSyncedTrash(userId);
         } else {
@@ -345,17 +350,171 @@ public class SyncManager {
 
         return true;
     }
+
+    /**
+     * Đẩy các thay đổi từ habit lên sv
+     * @return
+     * @throws IOException
+     */
+    private boolean pushLocalHabitChanges() throws IOException {
+        String userId = currentUserId();
+        List<Habit> pendingHabits = habitDao.getPendingSyncHabits(userId);
+        Log.d(TAG, "Pending local habits for sync: " + pendingHabits.size());
+        for (Habit habit : pendingHabits) {
+            habit.setUserId(userId);
+            Response<?> response = pushHabit(habit);
+            if (response.isSuccessful() || (response.code() == 404 && habit.isDeleted())) {
+                if (habit.isDeleted()) {
+                    habitDao.markDeletedSynced(habit.getId(), userId);
+                } else {
+                    habitDao.markSynced(habit.getId(), userId);
+                }
+            } else if (response.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            } else if (response.code() >= 500) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Response<?> pushHabit(Habit habit) throws IOException {
+        if (habit.isDeleted()) {
+            Response<Habit> response = todoApi.deleteHabit(habit.getId()).execute();
+            Log.d(TAG, "DELETE /api/habits/" + habit.getId() + " -> " + response.code());
+            return response;
+        }
+
+        Response<Habit> response = todoApi.updateHabit(habit.getId(), habit).execute();
+        Log.d(TAG, "PUT /api/habits/" + habit.getId() + " -> " + response.code());
+        if (response.code() == 404) {
+            Response<Habit> createResponse = todoApi.createHabit(habit).execute();
+            Log.d(TAG, "POST /api/habits -> " + createResponse.code());
+            return createResponse;
+        }
+        return response;
+    }
+
+    private boolean pushLocalHabitCompletionChanges() throws IOException {
+        String userId = currentUserId();
+        List<HabitCompletion> pendingCompletions = habitCompletionDao.getPendingSyncCompletions(userId);
+        Log.d(TAG, "Pending local habit completions for sync: " + pendingCompletions.size());
+        for (HabitCompletion completion : pendingCompletions) {
+            completion.setUserId(userId);
+            Response<?> response = pushHabitCompletion(completion);
+            if (response.isSuccessful() || (response.code() == 404 && completion.isDeleted())) {
+                if (completion.isDeleted()) {
+                    habitCompletionDao.markDeletedSynced(completion.getId(), userId);
+                } else {
+                    habitCompletionDao.markSynced(completion.getId(), userId);
+                }
+            } else if (response.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            } else if (response.code() >= 500) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Response<?> pushHabitCompletion(HabitCompletion completion) throws IOException {
+        if (completion.isDeleted()) {
+            Response<HabitCompletion> response = todoApi.deleteHabitCompletion(completion.getId()).execute();
+            Log.d(TAG, "DELETE /api/habit-completions/" + completion.getId() + " -> " + response.code());
+            return response;
+        }
+
+        Response<HabitCompletion> response = todoApi.updateHabitCompletion(completion.getId(), completion).execute();
+        Log.d(TAG, "PUT /api/habit-completions/" + completion.getId() + " -> " + response.code());
+        if (response.code() == 404) {
+            Response<HabitCompletion> createResponse = todoApi.createHabitCompletion(completion).execute();
+            Log.d(TAG, "POST /api/habit-completions -> " + createResponse.code());
+            return createResponse;
+        }
+        return response;
+    }
+
+    /**
+     * Lấy dữ liệu Habits từ server về và cập nhật vào local database
+     * @return true nếu thành công hoặc không có dữ liệu mới, false nếu cần thử lại sau
+     * @throws IOException khi có lỗi kết nối mạng
+     */
+    private boolean pullRemoteHabits() throws IOException {
+        String userId = currentUserId();
+        Response<List<Habit>> response = todoApi.getAllHabits().execute();
+        if (!response.isSuccessful()) {
+            if (response.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            }
+            return response.code() < 500;
+        }
+
+        List<Habit> remoteHabits = response.body();
+        if (remoteHabits == null) {
+            return true;
+        }
+
+        List<Habit> mapped = new ArrayList<>();
+        for (Habit remote : remoteHabits) {
+            Habit habit = Habit.fromRemote(remote);
+            habit.setUserId(userId);
+            Habit local = habitDao.getHabitById(habit.getId(), userId);
+
+            // Local đã xóa nhưng chưa sync -> không lấy bản remote về đè lên
+            if (local != null && local.isDeleted() && !local.isSynced()) {
                 continue;
             }
-            // Nếu task local mới hơn remote và chưa sync thì không ghi đè bằng dữ liệu cũ từ server
-            if (local != null && !local.isSynced() && local.getUpdatedAt() > task.getUpdatedAt()) {
+            // Local có thay đổi mới hơn và chưa sync -> giữ bản local
+            if (local != null && !local.isSynced() && local.getUpdatedAt() > habit.getUpdatedAt()) {
                 continue;
             }
-            mapped.add(task);
+            mapped.add(habit);
         }
 
         if (!mapped.isEmpty()) {
-            taskDao.upsertAll(mapped);
+            habitDao.upsertAll(mapped);
+        }
+        return true;
+    }
+
+    private boolean pullRemoteHabitCompletions() throws IOException {
+        String userId = currentUserId();
+        Response<List<HabitCompletion>> response = todoApi.getAllHabitCompletions().execute();
+        if (!response.isSuccessful()) {
+            if (response.code() == 401) {
+                preferenceHelper.clearAuth();
+                return false;
+            }
+            return response.code() < 500;
+        }
+
+        List<HabitCompletion> remoteCompletions = response.body();
+        if (remoteCompletions == null) {
+            return true;
+        }
+
+        List<HabitCompletion> mapped = new ArrayList<>();
+        for (HabitCompletion remote : remoteCompletions) {
+            HabitCompletion completion = HabitCompletion.fromRemote(remote);
+            completion.setUserId(userId);
+            HabitCompletion local = habitCompletionDao.getCompletionById(completion.getId(), userId);
+
+            // Local đã xóa nhưng chưa sync -> không lấy bản remote về đè lên
+            if (local != null && local.isDeleted() && !local.isSynced()) {
+                continue;
+            }
+            // Local có thay đổi mới hơn và chưa sync -> giữ bản local
+            if (local != null && !local.isSynced() && local.getUpdatedAt() > completion.getUpdatedAt()) {
+                continue;
+            }
+            mapped.add(completion);
+        }
+
+        if (!mapped.isEmpty()) {
+            habitCompletionDao.upsertAll(mapped);
         }
         return true;
     }
