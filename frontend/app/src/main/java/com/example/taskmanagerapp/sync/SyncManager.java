@@ -53,19 +53,105 @@ public class SyncManager {
         }
 
         try {
-            // xử lý các task offline đang chờ sync
-            if (!pushLocalChanges()) {
-                return false;
-            }
-            return pullRemoteChanges(); // xử lý local xong thì mới pull dữ liệu từ sv về
+            if (!pushPendingPermanentTaskDeletes()) return false;
             if (!pushLocalCategoryChanges()) return false;
             if (!pushLocalTaskChanges()) return false;
+            if (!pushLocalHabitChanges()) return false; // commit sau
+            if (!pushLocalHabitCompletionChanges()) return false; // commit sau
             if (!pullRemoteCategories()) return false;
+            if (!flushPendingEmptyTrash()) return false;
             if (!pullRemoteTasks()) return false;
+            if (!pullRemoteHabits()) return false; // commit sau
+            return pullRemoteHabitCompletions(); // commit sau
         } catch (IOException e) {
             Log.e(TAG, "Sync failed with network/server error", e);
             return false;
         }
+    }
+
+    /**
+     * Đẩy các task đang chờ xoá cứng lên server
+     * @return true nếu thành công, false nếu cần thử lại sau
+     * @throws IOException
+     */
+    private boolean pushPendingPermanentTaskDeletes() throws IOException {
+        String userId = currentUserId();
+        List<Task> pendingTasks = taskDao.getPendingPermanentDeleteTasks(userId);
+        Log.d(TAG, "Pending permanent task deletes for sync: " + pendingTasks.size());
+        for (Task task : pendingTasks) {
+            task.setUserId(userId); // gán user lại cho chắc chắn
+            if (deleteRemoteTaskPermanently(task)) { // sv xử lý xoá cứng task
+                taskDao.deletePermanently(task.getId(), userId); // thành công thì xoá luôn task ở local
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Xử lý xoá cứng task vĩnh viễn
+     * @param task
+     * @return
+     * @throws IOException
+     */
+    private boolean deleteRemoteTaskPermanently(Task task) throws IOException {
+        Response<Void> response = todoApi.permanentlyDeleteTask(task.getId()).execute(); // gọi api xoá cứng
+        Log.d(TAG, "DELETE /api/tasks/" + task.getId() + "/permanent -> " + response.code());
+        if (response.isSuccessful() || response.code() == 404) { // 404: Task không tồn tại trên server -> xoá thành công
+            return true;
+        }
+        if (response.code() == 401) {
+            preferenceHelper.clearAuth();
+            return false;
+        }
+
+        // Task có thể chưa được soft-delete trên server (TH mất mạng nhưng Local đã xoá cứng task)
+        if (response.code() == 400) {
+            Response<Task> softDeleteResponse = todoApi.deleteTask(task.getId()).execute(); // xoá mềm
+            Log.d(TAG, "DELETE /api/tasks/" + task.getId() + " -> " + softDeleteResponse.code());
+            // xoá mềm thành công thì thử lại xoá cứng trên sv
+            if (softDeleteResponse.isSuccessful()) {
+                Response<Void> retryResponse = todoApi.permanentlyDeleteTask(task.getId()).execute();
+                Log.d(TAG, "DELETE /api/tasks/" + task.getId() + "/permanent retry -> " + retryResponse.code());
+                if (retryResponse.code() == 401) {
+                    preferenceHelper.clearAuth();
+                    return false;
+                }
+                return retryResponse.isSuccessful() || retryResponse.code() == 404;
+            }
+            if (softDeleteResponse.code() == 404) { // Task không tồn tại trên server -> xoá thành công
+                return true;
+            }
+            if (softDeleteResponse.code() == 401) {
+                preferenceHelper.clearAuth();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Xoá cứng toàn bộ task trong thùng rác
+     * @return
+     * @throws IOException
+     */
+    private boolean flushPendingEmptyTrash() throws IOException {
+        if (!preferenceHelper.isTaskEmptyTrashPending()) {
+            return true;
+        }
+
+        String userId = currentUserId();
+        Response<Void> response = todoApi.emptyTrash().execute();
+        Log.d(TAG, "DELETE /api/tasks/trash -> " + response.code());
+        if (response.isSuccessful()) {
+            taskDao.deleteAllTrash(userId);
+            preferenceHelper.setTaskEmptyTrashPending(false);
+            return true;
+        }
+        if (response.code() == 401) {
+            preferenceHelper.clearAuth();
+        }
+        return false;
     }
 
     private boolean pushLocalCategoryChanges() throws IOException {
