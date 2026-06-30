@@ -28,10 +28,11 @@ public class TaskRepository {
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
 
     private TaskRepository(Context appContext) {
-        AppDatabase db = AppDatabase.getInstance(appContext.getApplicationContext());
+        Context applicationContext = appContext.getApplicationContext();
+        AppDatabase db = AppDatabase.getInstance(applicationContext);
         this.dao = db.taskDao();
-        this.syncManager = new SyncManager(appContext.getApplicationContext(), dao);
-        this.preferenceHelper = new PreferenceHelper(appContext.getApplicationContext());
+        this.syncManager = new SyncManager(applicationContext);
+        this.preferenceHelper = new PreferenceHelper(applicationContext);
     }
 
     /**
@@ -94,6 +95,31 @@ public class TaskRepository {
                 dao.deleteById(id, userId);
             }
             syncManager.syncNow();
+        });
+    }
+
+    public void permanentlyDeleteTask(String id) {
+        ioExecutor.execute(() -> {
+            if (id == null) {
+                return;
+            }
+
+            String userId = currentUserId();
+            int updated = dao.markPermanentDeletePending(id, userId, System.currentTimeMillis());
+            if (updated > 0) {
+                syncManager.syncNow();
+            }
+        });
+    }
+
+    public void emptyTrash() {
+        ioExecutor.execute(() -> {
+            String userId = currentUserId();
+            int updated = dao.markAllTrashPermanentDeletePending(userId, System.currentTimeMillis());
+            if (updated > 0) {
+                preferenceHelper.setTaskEmptyTrashPending(true);
+                syncManager.syncNow();
+            }
         });
     }
 

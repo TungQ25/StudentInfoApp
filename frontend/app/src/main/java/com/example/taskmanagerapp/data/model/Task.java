@@ -61,8 +61,11 @@ public class Task implements Serializable {
     @ColumnInfo(name = TaskContract.COL_DELETED, defaultValue = "0")
     private boolean deleted;
 
+    @ColumnInfo(name = TaskContract.COL_PERMANENT_DELETE_PENDING, defaultValue = "0")
+    private boolean permanentDeletePending;
+
     @SerializedName("userId")
-    @ColumnInfo(name = TaskContract.COL_USER_ID, defaultValue = "''")
+    @ColumnInfo(name = TaskContract.COL_USER_ID)
     private String userId;
 
     /** Trang thai UI, khong luu trong DB. */
@@ -112,9 +115,11 @@ public class Task implements Serializable {
                 categoryId,
                 deadline,
                 isCompleted,
+                false,
                 priority,
                 imagePath,
                 System.currentTimeMillis(),
+                false,
                 false,
                 false,
                 null);
@@ -134,6 +139,7 @@ public class Task implements Serializable {
             long updatedAt,
             boolean synced,
             boolean deleted,
+            boolean permanentDeletePending,
             String userId) {
         this.id = id;
         this.title = title;
@@ -147,6 +153,7 @@ public class Task implements Serializable {
         this.updatedAt = updatedAt;
         this.synced = synced;
         this.deleted = deleted;
+        this.permanentDeletePending = permanentDeletePending;
         this.userId = userId;
         this.isSelected = false;
     }
@@ -255,6 +262,14 @@ public class Task implements Serializable {
         this.deleted = deleted;
     }
 
+    public boolean isPermanentDeletePending() {
+        return permanentDeletePending;
+    }
+
+    public void setPermanentDeletePending(boolean permanentDeletePending) {
+        this.permanentDeletePending = permanentDeletePending;
+    }
+
     public String getUserId() {
         return userId;
     }
@@ -275,12 +290,14 @@ public class Task implements Serializable {
         updatedAt = System.currentTimeMillis();
         synced = false;
         deleted = false;
+        permanentDeletePending = false;
     }
 
     public void markDeletedLocal() {
         updatedAt = System.currentTimeMillis();
         synced = false;
         deleted = true;
+        permanentDeletePending = false;
     }
 
     /**
@@ -303,8 +320,8 @@ public class Task implements Serializable {
                 remote.getUpdatedAt(),
                 true,
                 false,
+                false,
                 remote.getUserId());
-        return task;
     }
 
     @Override
@@ -317,6 +334,7 @@ public class Task implements Serializable {
                 && updatedAt == task.updatedAt
                 && synced == task.synced
                 && deleted == task.deleted
+                && permanentDeletePending == task.permanentDeletePending
                 && isSelected == task.isSelected
                 && Objects.equals(id, task.id)
                 && Objects.equals(title, task.title)
@@ -330,26 +348,7 @@ public class Task implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, category, deadline, isCompleted, priority,
-                imagePath, updatedAt, synced, deleted, userId, isSelected);
-    }
-
-    @Override
-    public String toString() {
-        return "Task{" +
-                "id='" + id + '\'' +
-                ", title='" + title + '\'' +
-                ", description='" + description + '\'' +
-                ", category='" + category + '\'' +
-                ", deadline='" + deadline + '\'' +
-                ", isCompleted=" + isCompleted +
-                ", priority='" + priority + '\'' +
-                ", imagePath='" + imagePath + '\'' +
-                ", updatedAt=" + updatedAt +
-                ", synced=" + synced +
-                ", deleted=" + deleted +
-                ", userId='" + userId + '\'' +
-                '}';
         return Objects.hash(id, title, description, categoryId, deadline, isCompleted, wontDo,
+                priority, imagePath, updatedAt, synced, deleted, permanentDeletePending, userId, isSelected);
     }
 }
