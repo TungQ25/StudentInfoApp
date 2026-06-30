@@ -8,6 +8,7 @@
     <string name="add_task">Add Task</string>
     <string name="title_main">Tasks Manager</string>
     <string name="title_task_detail">Task Details</string>
+    <string name="title_matrix">Eisenhower Matrix</string>
     <string name="title_add_task">Thêm công việc</string>
     <string name="title_settings">Cài đặt</string>
     <string name="settings_theme_label">Giao diện:</string>

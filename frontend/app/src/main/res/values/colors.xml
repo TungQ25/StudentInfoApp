@@ -15,4 +15,5 @@
   <color name="colorSurfaceVariant">#2A2A2A</color>
   <color name="colorOnSurfaceVariant">#DADADA</color>
   <color name="colorOutline">#8A8A8A</color>
+  <color name="colorAddAction">#FF7A18</color>
 </resources>

@@ -77,6 +77,7 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
             } else {
                 root.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             }
+            root.setAlpha(task.isCompleted() ? 0.42f : 1f);
 
             cbCompleted.setOnCheckedChangeListener(null);
             cbCompleted.setChecked(task.isCompleted());

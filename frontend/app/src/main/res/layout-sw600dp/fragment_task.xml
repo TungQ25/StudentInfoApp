@@ -64,16 +64,10 @@
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnAddTask"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        style="@style/Widget.TaskManager.AddFab"
         android:contentDescription="@string/add_task"
-        app:backgroundTint="@color/colorPrimary"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@drawable/ic_add"
-        app:tint="@color/colorOnPrimary" />
+        app:layout_constraintEnd_toEndOf="parent" />
 <View
         android:id="@+id/detail_scrim"
         android:layout_width="0dp"
