@@ -23,14 +23,17 @@ public class Task {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "category", length = 100)
-    private String category;
+    @Column(name = "category_id", length = 36)
+    private String categoryId;
 
     @Column(name = "deadline", length = 50)
     private String deadline;
 
     @Column(name = "completed", nullable = false)
     private boolean completed = false;
+
+    @Column(name = "wont_do", nullable = false)
+    private boolean wontDo = false;
 
     @Column(name = "priority", length = 50)
     private String priority;
@@ -74,12 +77,12 @@ public class Task {
         this.description = description;
     }
 
-    public String getCategory() {
-        return category;
+    public String getCategoryId() {
+        return categoryId;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setCategoryId(String categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getDeadline() {
@@ -95,7 +98,15 @@ public class Task {
     }
 
     public void setCompleted(boolean completed) {
-        this.completed = completed;
+        this.completed = completed; if (completed) this.wontDo = false;
+    }
+
+    public boolean isWontDo() {
+        return wontDo;
+    }
+
+    public void setWontDo(boolean wontDo) {
+        this.wontDo = wontDo; if (wontDo) this.completed = false;
     }
 
     public String getPriority() {
