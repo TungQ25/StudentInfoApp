@@ -8,14 +8,20 @@ import androidx.room.RoomDatabase;
 
 import com.example.taskmanagerapp.data.model.Task;
 import com.example.taskmanagerapp.contract.TaskContract;
+import com.example.taskmanagerapp.data.model.Category;
+import com.example.taskmanagerapp.data.model.Habit;
+import com.example.taskmanagerapp.data.model.HabitCompletion;
 
 @Database(entities = {Task.class}, version = 1, exportSchema = false)
+@Database(entities = {Task.class, Category.class}, version = 1, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static final String DB_NAME = TaskContract.DATABASE_NAME;
     private static volatile AppDatabase instance;
 
     public abstract TaskDao taskDao();
+
+    public abstract CategoryDao categoryDao();
 
     public static AppDatabase getInstance(Context context) {
         if (instance == null) {

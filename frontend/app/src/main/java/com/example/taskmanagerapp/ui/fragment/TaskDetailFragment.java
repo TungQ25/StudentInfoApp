@@ -95,7 +95,7 @@ public class TaskDetailFragment extends Fragment {
                 tvDescription.setText(task.getDescription());
             }
 
-            tvCategory.setText(task.getCategory());
+            tvCategory.setText(task.getCategoryId() == null || task.getCategoryId().trim().isEmpty() ? "Inbox" : "Category");
             tvDeadline.setText(task.getDeadline());
             tvPriority.setText(task.getPriority());
             tvStatus.setText(task.isCompleted() ? "Completed" : "Pending");

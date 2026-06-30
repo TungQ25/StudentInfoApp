@@ -31,8 +31,9 @@ public class Task implements Serializable {
     @ColumnInfo(name = TaskContract.COL_DESCRIPTION)
     private String description;
 
-    @ColumnInfo(name = TaskContract.COL_CATEGORY)
-    private String category;
+    @SerializedName("categoryId")
+    @ColumnInfo(name = TaskContract.COL_CATEGORY_ID)
+    private String categoryId;
 
     @ColumnInfo(name = TaskContract.COL_DEADLINE)
     private String deadline;
@@ -40,6 +41,10 @@ public class Task implements Serializable {
     @SerializedName("completed")
     @ColumnInfo(name = TaskContract.COL_COMPLETED)
     private boolean isCompleted;
+
+    @SerializedName("wontDo")
+    @ColumnInfo(name = TaskContract.COL_WONT_DO, defaultValue = "0")
+    private boolean wontDo;
 
     @ColumnInfo(name = TaskContract.COL_PRIORITY)
     private String priority;
@@ -56,8 +61,11 @@ public class Task implements Serializable {
     @ColumnInfo(name = TaskContract.COL_DELETED, defaultValue = "0")
     private boolean deleted;
 
+    @ColumnInfo(name = TaskContract.COL_PERMANENT_DELETE_PENDING, defaultValue = "0")
+    private boolean permanentDeletePending;
+
     @SerializedName("userId")
-    @ColumnInfo(name = TaskContract.COL_USER_ID, defaultValue = "''")
+    @ColumnInfo(name = TaskContract.COL_USER_ID)
     private String userId;
 
     /** Trang thai UI, khong luu trong DB. */
@@ -69,11 +77,11 @@ public class Task implements Serializable {
     public Task(
             @NonNull String title,
             String description,
-            String category,
+            String categoryId,
             String deadline,
             boolean isCompleted,
             String priority) {
-        this(UUID.randomUUID().toString(), title, description, category, deadline, isCompleted, priority, null);
+        this(UUID.randomUUID().toString(), title, description, categoryId, deadline, isCompleted, priority, null);
     }
 
     /** Tạo task mới có id. */
@@ -82,11 +90,11 @@ public class Task implements Serializable {
             @NonNull String id,
             @NonNull String title,
             String description,
-            String category,
+            String categoryId,
             String deadline,
             boolean isCompleted,
             String priority) {
-        this(id, title, description, category, deadline, isCompleted, priority, null);
+        this(id, title, description, categoryId, deadline, isCompleted, priority, null);
     }
 
     /** Tạo task mới có id và title. */
@@ -95,7 +103,7 @@ public class Task implements Serializable {
             @NonNull String id,
             @NonNull String title,
             String description,
-            String category,
+            String categoryId,
             String deadline,
             boolean isCompleted,
             String priority,
@@ -104,12 +112,14 @@ public class Task implements Serializable {
                 id,
                 title,
                 description,
-                category,
+                categoryId,
                 deadline,
                 isCompleted,
+                false,
                 priority,
                 imagePath,
                 System.currentTimeMillis(),
+                false,
                 false,
                 false,
                 null);
@@ -120,26 +130,30 @@ public class Task implements Serializable {
             @NonNull String id,
             @NonNull String title,
             String description,
-            String category,
+            String categoryId,
             String deadline,
             boolean isCompleted,
+            boolean wontDo,
             String priority,
             String imagePath,
             long updatedAt,
             boolean synced,
             boolean deleted,
+            boolean permanentDeletePending,
             String userId) {
         this.id = id;
         this.title = title;
         this.description = description;
-        this.category = category;
+        this.categoryId = categoryId;
         this.deadline = deadline;
         this.isCompleted = isCompleted;
+        this.wontDo = wontDo;
         this.priority = priority;
         this.imagePath = imagePath;
         this.updatedAt = updatedAt;
         this.synced = synced;
         this.deleted = deleted;
+        this.permanentDeletePending = permanentDeletePending;
         this.userId = userId;
         this.isSelected = false;
     }
@@ -170,12 +184,12 @@ public class Task implements Serializable {
         this.description = description;
     }
 
-    public String getCategory() {
-        return category;
+    public String getCategoryId() {
+        return categoryId;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setCategoryId(String categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getDeadline() {
@@ -192,6 +206,20 @@ public class Task implements Serializable {
 
     public void setCompleted(boolean completed) {
         isCompleted = completed;
+        if (completed) {
+            wontDo = false;
+        }
+    }
+
+    public boolean isWontDo() {
+        return wontDo;
+    }
+
+    public void setWontDo(boolean wontDo) {
+        this.wontDo = wontDo;
+        if (wontDo) {
+            isCompleted = false;
+        }
     }
 
     public String getPriority() {
@@ -234,6 +262,14 @@ public class Task implements Serializable {
         this.deleted = deleted;
     }
 
+    public boolean isPermanentDeletePending() {
+        return permanentDeletePending;
+    }
+
+    public void setPermanentDeletePending(boolean permanentDeletePending) {
+        this.permanentDeletePending = permanentDeletePending;
+    }
+
     public String getUserId() {
         return userId;
     }
@@ -254,31 +290,38 @@ public class Task implements Serializable {
         updatedAt = System.currentTimeMillis();
         synced = false;
         deleted = false;
+        permanentDeletePending = false;
     }
 
     public void markDeletedLocal() {
         updatedAt = System.currentTimeMillis();
         synced = false;
         deleted = true;
+        permanentDeletePending = false;
     }
 
+    /**
+     * Chuyển một Task lấy từ server về thành Task local để lưu vào Room.
+     * @param remote The task data from the remote source.
+     * @return A new Task instance configured for local storage.
+     */
     public static Task fromRemote(Task remote) {
-        String id = remote.getId() == null ? UUID.randomUUID().toString() : remote.getId();
-        String title = remote.getTitle() == null ? "" : remote.getTitle();
-        Task task = new Task(
-                id,
-                title,
+        if (remote == null) return null;
+        return new Task(
+                remote.getId() == null ? UUID.randomUUID().toString() : remote.getId(),
+                remote.getTitle() == null ? "" : remote.getTitle(),
                 remote.getDescription(),
-                remote.getCategory() == null ? "All" : remote.getCategory(),
+                remote.getCategoryId(),
                 remote.getDeadline(),
                 remote.isCompleted(),
-                remote.getPriority() == null ? "Low" : remote.getPriority(),
+                remote.isWontDo(),
+                remote.getPriority() == null || remote.getPriority().trim().isEmpty() ? "None" : remote.getPriority(),
                 remote.getImagePath(),
                 remote.getUpdatedAt(),
                 true,
                 false,
+                false,
                 remote.getUserId());
-        return task;
     }
 
     @Override
@@ -287,14 +330,16 @@ public class Task implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
         return isCompleted == task.isCompleted
+                && wontDo == task.wontDo
                 && updatedAt == task.updatedAt
                 && synced == task.synced
                 && deleted == task.deleted
+                && permanentDeletePending == task.permanentDeletePending
                 && isSelected == task.isSelected
                 && Objects.equals(id, task.id)
                 && Objects.equals(title, task.title)
                 && Objects.equals(description, task.description)
-                && Objects.equals(category, task.category)
+                && Objects.equals(categoryId, task.categoryId)
                 && Objects.equals(deadline, task.deadline)
                 && Objects.equals(priority, task.priority)
                 && Objects.equals(imagePath, task.imagePath)
@@ -303,25 +348,7 @@ public class Task implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, category, deadline, isCompleted, priority,
-                imagePath, updatedAt, synced, deleted, userId, isSelected);
-    }
-
-    @Override
-    public String toString() {
-        return "Task{" +
-                "id='" + id + '\'' +
-                ", title='" + title + '\'' +
-                ", description='" + description + '\'' +
-                ", category='" + category + '\'' +
-                ", deadline='" + deadline + '\'' +
-                ", isCompleted=" + isCompleted +
-                ", priority='" + priority + '\'' +
-                ", imagePath='" + imagePath + '\'' +
-                ", updatedAt=" + updatedAt +
-                ", synced=" + synced +
-                ", deleted=" + deleted +
-                ", userId='" + userId + '\'' +
-                '}';
+        return Objects.hash(id, title, description, categoryId, deadline, isCompleted, wontDo,
+                priority, imagePath, updatedAt, synced, deleted, permanentDeletePending, userId, isSelected);
     }
 }

@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tvSidebarSection"
+    android:layout_width="match_parent"
+    android:layout_height="32dp"
+    android:gravity="bottom|start"
+    android:paddingHorizontal="18dp"
+    android:paddingBottom="6dp"
+    android:text="Section"
+    android:textColor="@color/colorOutline"
+    android:textSize="12sp"
+    android:textStyle="bold" />
