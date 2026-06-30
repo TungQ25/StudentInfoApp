@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 import com.example.taskmanager.entity.Task;
-import com.example.taskmanager.repository.CategoryRepository;
 import com.example.taskmanager.repository.TaskRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,11 +27,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class TaskController {
 
     private final TaskRepository repository;
-    private final CategoryRepository categoryRepository;
 
-    public TaskController(TaskRepository repository, CategoryRepository categoryRepository) {
+    public TaskController(TaskRepository repository) {
         this.repository = repository;
-        this.categoryRepository = categoryRepository;
     }
 
     @GetMapping
@@ -54,31 +51,30 @@ public class TaskController {
 
     @PostMapping
     public ResponseEntity<Task> createTask(@Valid @RequestBody Task task, @AuthenticationPrincipal String userId) {
-        String currentUserId = currentUserId(userId);
         if (task.getId() == null || task.getId().isBlank()) {
             task.setId(UUID.randomUUID().toString());
         }
         if (repository.existsById(task.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Task id already exists");
         }
-        validateCategory(task.getCategoryId(), currentUserId);
+
         task.setDeleted(false);
         task.setDeletedAt(null);
-        task.setUserId(currentUserId);
+        task.setUserId(currentUserId(userId));
+        normalizeOptionalFields(task);
         normalizeUpdatedAt(task, task);
         return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(task));
     }
 
     @PutMapping("/{id}")
     public Task updateTask(@PathVariable String id, @Valid @RequestBody Task task, @AuthenticationPrincipal String userId) {
-        String currentUserId = currentUserId(userId);
-        Task existingTask = repository.findAccessibleById(id, currentUserId)
+        Task existingTask = repository.findAccessibleById(id, currentUserId(userId))
                 .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        validateCategory(task.getCategoryId(), currentUserId);
         existingTask.setTitle(task.getTitle());
         existingTask.setDescription(task.getDescription());
+        normalizeOptionalFields(task);
         existingTask.setCategoryId(task.getCategoryId());
         existingTask.setDeadline(task.getDeadline());
         existingTask.setCompleted(task.isCompleted());
@@ -134,23 +130,29 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    private void validateCategory(String categoryId, String userId) {
-        // Task không có category thì bỏ qua kiểm tra
-        if (categoryId == null || categoryId.isBlank()) {
-            return;
-        }
-        // Chỉ duyệt category chưa bị xoá mềm, không thì báo lỗi
-        categoryRepository.findAccessibleById(categoryId, userId)
-                .filter(category -> !category.isDeleted())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found"));
-    }
-
+    /**
+     * Kiểm tra updatedAt, giá trị không hợp lý thì gán thời gian hiện tại
+     * @param targetTask: task cần cập nhật
+     * @param requestTask: task gửi lên 
+     */
     private static void normalizeUpdatedAt(Task targetTask, Task requestTask) {
         targetTask.setUpdatedAt(
                 requestTask.getUpdatedAt() > 0
                         ? requestTask.getUpdatedAt()
                         : System.currentTimeMillis()
         );
+    }
+
+    private static void normalizeOptionalFields(Task task) {
+        task.setDescription(blankToNull(task.getDescription()));
+        task.setCategoryId(blankToNull(task.getCategoryId()));
+        task.setDeadline(blankToNull(task.getDeadline()));
+        task.setPriority(blankToNull(task.getPriority()));
+        task.setImagePath(blankToNull(task.getImagePath()));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private static String currentUserId(String userId) {
