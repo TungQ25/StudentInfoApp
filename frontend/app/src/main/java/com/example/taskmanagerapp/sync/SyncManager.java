@@ -56,9 +56,13 @@ public class SyncManager {
             if (!pushPendingPermanentTaskDeletes()) return false;
             if (!pushLocalCategoryChanges()) return false;
             if (!pushLocalTaskChanges()) return false;
+            if (!pushLocalHabitChanges()) return false; // commit sau
+            if (!pushLocalHabitCompletionChanges()) return false; // commit sau
             if (!pullRemoteCategories()) return false;
             if (!flushPendingEmptyTrash()) return false;
             if (!pullRemoteTasks()) return false;
+            if (!pullRemoteHabits()) return false; // commit sau
+            return pullRemoteHabitCompletions(); // commit sau
         } catch (IOException e) {
             Log.e(TAG, "Sync failed with network/server error", e);
             return false;

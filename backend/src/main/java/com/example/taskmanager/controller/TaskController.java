@@ -79,6 +79,7 @@ public class TaskController {
         validateCategory(task.getCategoryId(), currentUserId);
         existingTask.setTitle(task.getTitle());
         existingTask.setDescription(task.getDescription());
+        normalizeOptionalFields(task);
         existingTask.setCategoryId(task.getCategoryId());
         existingTask.setDeadline(task.getDeadline());
         existingTask.setCompleted(task.isCompleted());
@@ -145,12 +146,29 @@ public class TaskController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found"));
     }
 
+    /**
+     * Kiểm tra updatedAt, giá trị không hợp lý thì gán thời gian hiện tại
+     * @param targetTask: task cần cập nhật
+     * @param requestTask: task gửi lên
+     */
     private static void normalizeUpdatedAt(Task targetTask, Task requestTask) {
         targetTask.setUpdatedAt(
                 requestTask.getUpdatedAt() > 0
                         ? requestTask.getUpdatedAt()
                         : System.currentTimeMillis()
         );
+    }
+
+    private static void normalizeOptionalFields(Task task) {
+        task.setDescription(blankToNull(task.getDescription()));
+        task.setCategoryId(blankToNull(task.getCategoryId()));
+        task.setDeadline(blankToNull(task.getDeadline()));
+        task.setPriority(blankToNull(task.getPriority()));
+        task.setImagePath(blankToNull(task.getImagePath()));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private static String currentUserId(String userId) {
