@@ -1,6 +1,8 @@
 package com.example.taskmanagerapp.data.remote;
 
 import com.example.taskmanagerapp.data.model.Category;
+import com.example.taskmanagerapp.data.model.Habit;
+import com.example.taskmanagerapp.data.model.HabitCompletion;
 import com.example.taskmanagerapp.data.model.Task;
 
 import java.util.List;
@@ -49,4 +51,28 @@ public interface TodoApi {
 
     @DELETE("api/categories/{id}")
     Call<Category> deleteCategory(@Path("id") String id);
+
+    @GET("api/habits")
+    Call<List<Habit>> getAllHabits();
+
+    @POST("api/habits")
+    Call<Habit> createHabit(@Body Habit habit);
+
+    @PUT("api/habits/{id}")
+    Call<Habit> updateHabit(@Path("id") String id, @Body Habit habit);
+
+    @DELETE("api/habits/{id}")
+    Call<Habit> deleteHabit(@Path("id") String id);
+
+    @GET("api/habit-completions")
+    Call<List<HabitCompletion>> getAllHabitCompletions();
+
+    @POST("api/habit-completions")
+    Call<HabitCompletion> createHabitCompletion(@Body HabitCompletion completion);
+
+    @PUT("api/habit-completions/{id}")
+    Call<HabitCompletion> updateHabitCompletion(@Path("id") String id, @Body HabitCompletion completion);
+
+    @DELETE("api/habit-completions/{id}")
+    Call<HabitCompletion> deleteHabitCompletion(@Path("id") String id);
 }
