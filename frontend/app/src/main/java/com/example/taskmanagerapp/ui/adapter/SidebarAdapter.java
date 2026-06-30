@@ -11,6 +11,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.taskmanagerapp.R;
 import com.example.taskmanagerapp.data.model.Category;
 import com.example.taskmanagerapp.ui.model.SidebarItem;
+import com.example.taskmanagerapp.ui.model.SmartFilter;
+import com.example.taskmanagerapp.ui.model.SystemFilter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,14 +53,22 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     public boolean canMove(int position) {
         SidebarItem item = getItem(position);
-        return item != null && item.getType() == SidebarItem.Type.CATEGORY;
+        return isMovable(item);
     }
 
     public boolean moveItem(int fromPosition, int toPosition) {
         if (!canMove(fromPosition) || !canMove(toPosition)) return false;
+        if (items.get(fromPosition).getType() != items.get(toPosition).getType()) return false;
         Collections.swap(items, fromPosition, toPosition);
         notifyItemMoved(fromPosition, toPosition);
         return true;
+    }
+
+    private boolean isMovable(SidebarItem item) {
+        if (item == null) return false;
+        return item.getType() == SidebarItem.Type.SMART_FILTER
+                || item.getType() == SidebarItem.Type.CATEGORY
+                || item.getType() == SidebarItem.Type.SYSTEM_FILTER;
     }
 
     public List<Category> getOrderedMainCategories() {
@@ -69,6 +79,26 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
         }
         return categories;
+    }
+
+    public List<SmartFilter> getOrderedSmartFilters() {
+        List<SmartFilter> filters = new ArrayList<>();
+        for (SidebarItem item : items) {
+            if (item.getType() == SidebarItem.Type.SMART_FILTER && item.getSmartFilter() != null) {
+                filters.add(item.getSmartFilter());
+            }
+        }
+        return filters;
+    }
+
+    public List<SystemFilter> getOrderedSystemFilters() {
+        List<SystemFilter> filters = new ArrayList<>();
+        for (SidebarItem item : items) {
+            if (item.getType() == SidebarItem.Type.SYSTEM_FILTER && item.getSystemFilter() != null) {
+                filters.add(item.getSystemFilter());
+            }
+        }
+        return filters;
     }
 
     @Override

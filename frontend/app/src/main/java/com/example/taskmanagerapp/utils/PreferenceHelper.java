@@ -17,6 +17,8 @@ public class PreferenceHelper {
     public static final String KEY_AUTH_EMAIL = "auth_email";
     public static final String KEY_SELECTED_TASK_FILTER_ID = "selected_task_filter_id";
     public static final String KEY_SELECTED_TASK_FILTER_TITLE = "selected_task_filter_title";
+    public static final String KEY_SIDEBAR_SMART_FILTER_ORDER = "sidebar_smart_filter_order";
+    public static final String KEY_SIDEBAR_SYSTEM_FILTER_ORDER = "sidebar_system_filter_order";
     public static final String KEY_TASK_EMPTY_TRASH_PENDING = "task_empty_trash_pending";
     public static final String THEME_LIGHT = "light";
     public static final String THEME_DARK = "dark";
@@ -77,6 +79,15 @@ public class PreferenceHelper {
 
     public String getSelectedTaskFilterTitle() {
         return preferences.getString(KEY_SELECTED_TASK_FILTER_TITLE, null);
+    }
+
+    public void setSidebarSmartFilterOrder(String order) {
+        preferences.edit().putString(KEY_SIDEBAR_SMART_FILTER_ORDER, order).apply();
+        Log.d(TAG, "setSidebarSmartFilterOrder -> " + order);
+    }
+
+    public String getSidebarSmartFilterOrder() {
+        return preferences.getString(KEY_SIDEBAR_SMART_FILTER_ORDER, null);
     }
 
     public void setSidebarSystemFilterOrder(String order) {

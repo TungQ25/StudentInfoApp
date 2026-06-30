@@ -195,9 +195,6 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
             }
         }).attachToRecyclerView(rvTasks);
 
-        categoryAdapter = new CategoryAdapter(CATEGORIES, this::onCategorySelected);
-        rvCategories.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-        rvCategories.setAdapter(categoryAdapter);
         sidebarAdapter = new SidebarAdapter(new SidebarAdapter.OnSidebarActionListener() {
             @Override
             public void onSidebarItemClick(SidebarItem item) {
@@ -224,6 +221,51 @@ public class TaskFragment extends Fragment implements TaskDetailFragment.OnNavig
         });
         rvSidebar.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvSidebar.setAdapter(sidebarAdapter);
+        setupSidebarDrag();
+    }
+
+    /**
+     * Thiết lập kéo thả sidebar
+     */
+    private void setupSidebarDrag() {
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                int from = viewHolder.getBindingAdapterPosition();
+                int to = target.getBindingAdapterPosition();
+                return sidebarAdapter.moveItem(from, to);
+            }
+
+            @Override public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) { }
+
+            @Override
+            public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                int position = viewHolder.getBindingAdapterPosition();
+                return sidebarAdapter.canMove(position) ? makeMovementFlags(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) : 0;
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                int position = viewHolder.getBindingAdapterPosition();
+                saveSidebarOrder(sidebarAdapter.getItem(position));
+            }
+        }).attachToRecyclerView(rvSidebar);
+    }
+
+    /**
+     * Chặn kéo lẫn qua nhóm khác
+     * @param movedItem
+     */
+    private void saveSidebarOrder(SidebarItem movedItem) {
+        if (movedItem == null) return;
+        if (movedItem.getType() == SidebarItem.Type.CATEGORY) {
+            categoryViewModel.updateCategoryOrders(sidebarAdapter.getOrderedMainCategories());
+        } else if (movedItem.getType() == SidebarItem.Type.SMART_FILTER) {
+            preferenceHelper.setSidebarSmartFilterOrder(enumOrderToPreference(sidebarAdapter.getOrderedSmartFilters()));
+        } else if (movedItem.getType() == SidebarItem.Type.SYSTEM_FILTER) {
+            preferenceHelper.setSidebarSystemFilterOrder(enumOrderToPreference(sidebarAdapter.getOrderedSystemFilters()));
+        }
     }
 
     private void setupDetailOverlay() {
