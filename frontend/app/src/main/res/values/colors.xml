@@ -16,4 +16,10 @@
   <color name="colorOnSurfaceVariant">#DADADA</color>
   <color name="colorOutline">#8A8A8A</color>
   <color name="colorAddAction">#FF7A18</color>
+  <color name="bottom_nav_bar">#181A1D</color>
+  <color name="bottom_nav_bar_stroke">#2B3036</color>
+  <color name="bottom_nav_selected_bubble">#3A281F</color>
+  <color name="bottom_nav_icon_inactive">#8D949F</color>
+  <color name="bottom_nav_icon_selected_stroke">#FFF4EA</color>
+  <color name="bottom_nav_ripple">#26FFFFFF</color>
 </resources>
