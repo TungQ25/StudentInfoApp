@@ -5,27 +5,40 @@ Spring Boot REST API for the Android Task Manager app.
 ## Requirements
 
 - Java 17 or newer
-- MySQL running on `localhost:3306`
+- PostgreSQL running on `localhost:5432`
 - Database user configured in `src/main/resources/application.properties`
 
 Default config:
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/tasks_manager_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-spring.datasource.username=root
-spring.datasource.password=
+spring.datasource.url=jdbc:postgresql://localhost:5432/tasks_manager_db
+spring.datasource.username=postgres
+spring.datasource.password=123456
 ```
 
-Update `spring.datasource.password` if your MySQL root account has a password.
+Create the database before running the backend:
+
+```sql
+CREATE DATABASE tasks_manager_db;
+```
+
+You can override the local values with environment variables:
+
+```powershell
+$env:SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/tasks_manager_db'
+$env:SPRING_DATASOURCE_USERNAME='postgres'
+$env:SPRING_DATASOURCE_PASSWORD='123456'
+```
 
 ## Run
 
-From the repo root:
+From the backend directory:
 
 ```powershell
+cd backend
 $env:JAVA_HOME='D:\Android\Android Studio\jbr'
 $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
-.\gradlew.bat :backend:bootRun
+.\gradlew.bat bootRun
 ```
 
 The API runs at:
