@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sidebarItemRoot"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="2dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="10dp">
+
+    <TextView
+        android:id="@+id/tvSidebarIcon"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:background="@drawable/bg_sidebar_icon"
+        android:gravity="center"
+        android:text="#"
+        android:textColor="@color/colorOnSurface"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/tvSidebarTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:text="Category"
+        android:textColor="@color/colorOnSurface"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/tvSidebarCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="28dp"
+        android:gravity="end"
+        android:text="0"
+        android:textColor="@color/colorOutline"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/btnSidebarMore"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_task_editor_icon_button"
+        android:gravity="center"
+        android:text="⋮"
+        android:textColor="@color/colorOnSurfaceVariant"
+        android:textSize="20sp"
+        android:visibility="gone" />
+</LinearLayout>

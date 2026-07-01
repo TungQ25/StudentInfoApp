@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bottom_nav_height"
+    android:background="@android:color/transparent"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:paddingStart="@dimen/bottom_nav_horizontal_padding"
+    android:paddingEnd="@dimen/bottom_nav_horizontal_padding">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/bottom_nav_pill_height"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="@dimen/bottom_nav_pill_bottom_margin"
+        android:background="@drawable/bg_bottom_nav_bar"
+        android:baselineAligned="false"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:elevation="12dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp">
+
+        <LinearLayout
+            android:id="@+id/nav_pomodoro"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/nav_pomodoro"
+            android:focusable="true"
+            android:gravity="center">
+
+            <FrameLayout
+                android:layout_width="@dimen/bottom_nav_icon_bubble_size"
+                android:layout_height="@dimen/bottom_nav_icon_bubble_size"
+                android:background="@drawable/ripple_bottom_nav_icon_bg"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no">
+
+                <ImageView
+                    android:layout_width="@dimen/bottom_nav_icon_size"
+                    android:layout_height="@dimen/bottom_nav_icon_size"
+                    android:layout_gravity="center"
+                    android:duplicateParentState="true"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_pomodoro" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_matrix"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/nav_matrix"
+            android:focusable="true"
+            android:gravity="center">
+
+            <FrameLayout
+                android:layout_width="@dimen/bottom_nav_icon_bubble_size"
+                android:layout_height="@dimen/bottom_nav_icon_bubble_size"
+                android:background="@drawable/ripple_bottom_nav_icon_bg"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no">
+
+                <ImageView
+                    android:layout_width="@dimen/bottom_nav_icon_size"
+                    android:layout_height="@dimen/bottom_nav_icon_size"
+                    android:layout_gravity="center"
+                    android:duplicateParentState="true"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_matrix" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_task"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/nav_task"
+            android:focusable="true"
+            android:gravity="center">
+
+            <FrameLayout
+                android:layout_width="@dimen/bottom_nav_icon_bubble_size"
+                android:layout_height="@dimen/bottom_nav_icon_bubble_size"
+                android:background="@drawable/ripple_bottom_nav_icon_bg"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no">
+
+                <ImageView
+                    android:layout_width="@dimen/bottom_nav_icon_size"
+                    android:layout_height="@dimen/bottom_nav_icon_size"
+                    android:layout_gravity="center"
+                    android:duplicateParentState="true"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_task" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_habit"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/nav_habit"
+            android:focusable="true"
+            android:gravity="center">
+
+            <FrameLayout
+                android:layout_width="@dimen/bottom_nav_icon_bubble_size"
+                android:layout_height="@dimen/bottom_nav_icon_bubble_size"
+                android:background="@drawable/ripple_bottom_nav_icon_bg"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no">
+
+                <ImageView
+                    android:layout_width="@dimen/bottom_nav_icon_size"
+                    android:layout_height="@dimen/bottom_nav_icon_size"
+                    android:layout_gravity="center"
+                    android:duplicateParentState="true"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_habit" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_settings"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/nav_settings"
+            android:focusable="true"
+            android:gravity="center">
+
+            <FrameLayout
+                android:layout_width="@dimen/bottom_nav_icon_bubble_size"
+                android:layout_height="@dimen/bottom_nav_icon_bubble_size"
+                android:background="@drawable/ripple_bottom_nav_icon_bg"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no">
+
+                <ImageView
+                    android:layout_width="@dimen/bottom_nav_icon_size"
+                    android:layout_height="@dimen/bottom_nav_icon_size"
+                    android:layout_gravity="center"
+                    android:duplicateParentState="true"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_settings" />
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

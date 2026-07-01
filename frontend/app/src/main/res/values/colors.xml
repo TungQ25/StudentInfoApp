@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="black">#FF000000</color>
+  <color name="white">#FFFFFFFF</color>
+  <color name="colorPrimary">#14B8A6</color>
+  <color name="colorOnPrimary">#FFFFFF</color>
+  <color name="colorPrimaryContainer">#123E3A</color>
+  <color name="colorOnPrimaryContainer">#DDFCF7</color>
+  <color name="colorSecondary">#77818C</color>
+  <color name="colorOnSecondary">#FFFFFF</color>
+  <color name="colorBackground">#101316</color>
+  <color name="colorOnBackground">#F2F5F7</color>
+  <color name="colorSurface">#1A1E22</color>
+  <color name="colorOnSurface">#F3F6F8</color>
+  <color name="colorSurfaceVariant">#242A30</color>
+  <color name="colorOnSurfaceVariant">#AEB8C2</color>
+  <color name="colorOutline">#3A444C</color>
+  <color name="colorDivider">#263039</color>
+  <color name="colorAddAction">#14B8A6</color>
+  <color name="colorAddActionPressed">#0F8F82</color>
+  <color name="colorDanger">#D84C4C</color>
+  <color name="colorOnDanger">#FFFFFF</color>
+  <color name="colorDangerContainer">#3B171A</color>
+  <color name="colorSettingsAvatarFill">#123D39</color>
+  <color name="bottom_nav_bar">#181D21</color>
+  <color name="bottom_nav_bar_stroke">#2C353D</color>
+  <color name="bottom_nav_selected_bubble">#123E3A</color>
+  <color name="bottom_nav_icon_inactive">#87919B</color>
+  <color name="bottom_nav_icon_selected_stroke">#DDFCF7</color>
+  <color name="bottom_nav_ripple">#2414B8A6</color>
+</resources>

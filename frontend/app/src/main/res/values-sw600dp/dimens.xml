@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="list_item_height">120dp</dimen>
+    <dimen name="text_title">20sp</dimen>
+    <dimen name="padding">16dp</dimen>
+    <dimen name="bottom_nav_height">88dp</dimen>
+    <dimen name="bottom_nav_horizontal_padding">72dp</dimen>
+    <dimen name="bottom_nav_pill_height">64dp</dimen>
+    <dimen name="bottom_nav_pill_bottom_margin">12dp</dimen>
+    <dimen name="bottom_nav_icon_bubble_size">52dp</dimen>
+    <dimen name="bottom_nav_icon_size">26dp</dimen>
+</resources>

@@ -1,0 +1,32 @@
+# Gradle / build output
+.gradle/
+build/
+out/
+.kotlin/
+
+# IDE / editor local files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Local Claude settings
+.claude/settings.local.json
+
+# Local environment / secrets
+.env
+.env.*
+!.env.example
+src/main/resources/application-local.properties
+src/main/resources/application-*.local.properties
+
+# Logs / runtime dumps
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+
+# OS files
+.DS_Store
+Thumbs.db
