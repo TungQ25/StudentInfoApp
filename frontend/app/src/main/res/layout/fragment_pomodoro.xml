@@ -12,7 +12,7 @@
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:padding="20dp"
-        android:background="#0F1217"
+        android:background="@color/colorBackground"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:text="Focus"
-            android:textColor="#FF7A1A"
+            android:textColor="@color/colorAddAction"
             android:textSize="24sp"
             android:textStyle="bold" />
 
@@ -65,7 +65,7 @@
                 android:layout_marginTop="22dp"
                 android:max="1500"
                 android:progress="1500"
-                android:progressTint="#FF7A1A"
+                android:progressTint="@color/colorAddAction"
                 android:progressBackgroundTint="@color/colorSurfaceVariant" />
 
             <TextView
