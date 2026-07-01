@@ -25,7 +25,6 @@ import com.example.taskmanagerapp.data.model.Category;
 import com.example.taskmanagerapp.data.model.Task;
 import com.example.taskmanagerapp.ui.activity.AddTaskActivity;
 import com.example.taskmanagerapp.ui.activity.MainActivity;
-import com.example.taskmanagerapp.ui.activity.TaskDetailActivity;
 import com.example.taskmanagerapp.utils.ImageStorageHelper;
 import com.example.taskmanagerapp.viewmodel.CategoryViewModel;
 import com.example.taskmanagerapp.viewmodel.TaskViewModel;
@@ -51,7 +50,6 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
     private CategoryViewModel categoryViewModel;
     private ImageStorageHelper imageStorage;
     private ActivityResultLauncher<Intent> addTaskLauncher;
-    private ActivityResultLauncher<Intent> detailTaskLauncher;
     private final List<Task> allTasks = new ArrayList<>();
     private final List<Category> categories = new ArrayList<>();
     private boolean showCompleted = true;
@@ -73,11 +71,6 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
                 task.setWontDo(data.getBooleanExtra("wontDo", false));
                 task.setImagePath(data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH));
                 taskViewModel.addTask(task);
-            }
-        });
-        detailTaskLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-            if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                handleTaskDetailResult(result.getData());
             }
         });
     }
@@ -105,6 +98,7 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
         }
 
         btnAddTask.setOnClickListener(v -> addTaskLauncher.launch(new Intent(requireContext(), AddTaskActivity.class)));
+        setupTaskDetailResultListener();
         observeData();
         taskViewModel.syncTasks();
     }
@@ -219,58 +213,65 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
     }
 
     private void openTaskDetail(Task task) {
-        Intent intent = new Intent(requireContext(), TaskDetailActivity.class);
-        intent.putExtra("id", task.getId());
-        intent.putExtra("title", task.getTitle());
-        intent.putExtra("description", task.getDescription());
-        intent.putExtra("categoryId", task.getCategoryId());
-        intent.putExtra("categoryName", getCategoryName(task.getCategoryId()));
-        intent.putExtra("priority", normalizePriority(task.getPriority()));
-        intent.putExtra("deadline", task.getDeadline());
-        intent.putExtra("completed", task.isCompleted());
-        intent.putExtra("wontDo", task.isWontDo());
-        intent.putExtra(AddTaskActivity.EXTRA_IMAGE_PATH, task.getImagePath());
-        detailTaskLauncher.launch(intent);
+        if (task == null || !(requireActivity() instanceof MainActivity)) {
+            return;
+        }
+        TaskDetailFragment fragment = TaskDetailFragment.newInstance(
+                task,
+                getCategoryName(task.getCategoryId()),
+                getCategoryIcon(task.getCategoryId())
+        );
+        ((MainActivity) requireActivity()).showFullScreenFragment(fragment);
     }
 
-    /**
-     * Xử lý kq trả về từ TaskDetailActivity
-     * @param data
-     */
-    private void handleTaskDetailResult(Intent data) {
-        String taskId = data.getStringExtra("id");
-        if (taskId == null) return;
-
-        if (data.getBooleanExtra("deleted", false)) {
-            Task existing = findTaskById(taskId);
-            if (existing != null) {
-                String img = existing.getImagePath();
-                if (img != null && !img.isEmpty()) imageStorage.deleteImage(img);
+    private void setupTaskDetailResultListener() {
+        getParentFragmentManager().setFragmentResultListener(TaskDetailFragment.RESULT_KEY, getViewLifecycleOwner(), (requestKey, result) -> {
+            String action = result.getString(TaskDetailFragment.RESULT_ACTION);
+            if (TaskDetailFragment.ACTION_UPDATED.equals(action)) {
+                updateTaskFromDetailResult(result);
             }
-            taskViewModel.deleteTask(taskId);
+        });
+    }
+
+    private void updateTaskFromDetailResult(Bundle result) {
+        String taskId = result.getString(TaskDetailFragment.RESULT_TASK_ID);
+        Task existing = findTaskById(taskId);
+        if (existing == null) {
             return;
         }
 
-        if (data.getBooleanExtra("updated", false)) {
-            Task existing = findTaskById(taskId);
-            String newImagePath = data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH);
-            if (existing != null) {
-                String oldImagePath = existing.getImagePath();
-                if (oldImagePath != null && !oldImagePath.equals(newImagePath)) imageStorage.deleteImage(oldImagePath);
-            }
-
-            Task updatedTask = new Task(
-                    taskId,
-                    data.getStringExtra("title"),
-                    data.getStringExtra("description"),
-                    data.getStringExtra("categoryId"),
-                    data.getStringExtra("deadline"),
-                    data.getBooleanExtra("completed", false),
-                    normalizePriority(data.getStringExtra("priority")));
-            updatedTask.setWontDo(data.getBooleanExtra("wontDo", false));
-            updatedTask.setImagePath(newImagePath);
-            taskViewModel.updateTask(updatedTask);
+        String newImagePath = result.containsKey(AddTaskActivity.EXTRA_IMAGE_PATH)
+                ? result.getString(AddTaskActivity.EXTRA_IMAGE_PATH)
+                : existing.getImagePath();
+        String oldImagePath = existing.getImagePath();
+        if (!sameString(oldImagePath, newImagePath) && oldImagePath != null && !oldImagePath.isEmpty()) {
+            imageStorage.deleteImage(oldImagePath);
         }
+
+        Task updatedTask = new Task(
+                existing.getId(),
+                resultString(result, "title", existing.getTitle()),
+                resultString(result, "description", existing.getDescription()),
+                resultString(result, "categoryId", existing.getCategoryId()),
+                resultString(result, "deadline", existing.getDeadline()),
+                result.containsKey("completed") ? result.getBoolean("completed") : existing.isCompleted(),
+                result.containsKey("wontDo") ? result.getBoolean("wontDo") : existing.isWontDo(),
+                normalizePriority(resultString(result, "priority", existing.getPriority())),
+                newImagePath,
+                existing.getUpdatedAt(),
+                existing.isSynced(),
+                existing.isDeleted(),
+                existing.isPermanentDeletePending(),
+                existing.getUserId());
+        taskViewModel.updateTask(updatedTask);
+    }
+
+    private String resultString(Bundle result, String key, String fallback) {
+        return result.containsKey(key) ? result.getString(key) : fallback;
+    }
+
+    private boolean sameString(String first, String second) {
+        return first == null ? second == null : first.equals(second);
     }
 
     private Task findTaskById(String taskId) {
@@ -286,6 +287,17 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
             if (categoryId.equals(category.getId())) return category.getName();
         }
         return "Inbox";
+    }
+
+    private String getCategoryIcon(String categoryId) {
+        if (categoryId == null || categoryId.trim().isEmpty()) return "#";
+        for (Category category : categories) {
+            if (categoryId.equals(category.getId())) {
+                String icon = category.getIcon();
+                return icon == null || icon.trim().isEmpty() ? "#" : icon;
+            }
+        }
+        return "#";
     }
 
     /**

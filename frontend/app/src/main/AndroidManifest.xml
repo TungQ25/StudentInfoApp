@@ -32,9 +32,6 @@
             android:name=".ui.activity.AddTaskActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activity.TaskDetailActivity"
-            android:exported="false" />
-        <activity
             android:name=".ui.activity.MainActivity"
             android:exported="false" />
     </application>
