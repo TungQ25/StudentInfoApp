@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -425,13 +424,7 @@ public class AddTaskActivity extends AppCompatActivity {
         selectedPriority = normalizePriority(selectedPriority);
         int color = priorityColor(selectedPriority);
         tvPriorityChip.setColorFilter(color);
-
-        GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.RECTANGLE);
-        background.setColor(Color.rgb(21, 26, 32));
-        background.setCornerRadius(dp(18));
-        background.setStroke(dp(1), color);
-        tvPriorityChip.setBackground(background);
+        tvPriorityChip.setBackgroundResource(R.drawable.bg_task_editor_icon_button);
     }
 
     private void updateDateTimeViews() {

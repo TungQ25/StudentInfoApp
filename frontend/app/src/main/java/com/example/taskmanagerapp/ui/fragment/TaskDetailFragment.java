@@ -6,7 +6,6 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -559,20 +558,14 @@ public class TaskDetailFragment extends Fragment {
     }
 
     private int categoryEditShift() {
-        return dp(38);
+        return dp(34);
     }
 
     private void bindPriorityChip(ImageView chip, String priority) {
         String normalized = normalizePriority(priority);
         int color = priorityColor(normalized);
         chip.setColorFilter(color);
-
-        GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.RECTANGLE);
-        background.setColor(Color.rgb(21, 26, 32));
-        background.setCornerRadius(dp(18));
-        background.setStroke(dp(1), color);
-        chip.setBackground(background);
+        chip.setBackgroundResource(R.drawable.bg_task_editor_icon_button);
     }
 
     private void observeCategories(TextView tvCategory) {
