@@ -6,144 +6,174 @@
     android:layout_height="match_parent"
     android:background="@color/colorBackground">
 
-    <ScrollView
-        android:id="@+id/matrixScroll"
+    <GridLayout
+        android:id="@+id/matrixGrid"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:alignmentMode="alignBounds"
         android:clipToPadding="false"
+        android:columnCount="2"
         android:padding="12dp"
+        android:rowCount="2"
+        android:useDefaultMargins="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <GridLayout
-            android:id="@+id/matrixGrid"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alignmentMode="alignBounds"
-            android:columnCount="2"
-            android:rowCount="2"
-            android:useDefaultMargins="true">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@drawable/bg_matrix_quadrant"
+            android:minHeight="0dp"
+            android:orientation="vertical"
+            android:padding="12dp">
 
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/tvMatrixHighTitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_rowWeight="1"
-                android:background="@drawable/bg_matrix_quadrant"
-                android:minHeight="280dp"
-                android:orientation="vertical"
-                android:padding="12dp">
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="I  Urgent &amp; Important"
+                android:textColor="#FF7FA4"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tvMatrixHighTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:text="I  Urgent &amp; Important"
-                    android:textColor="#FF7FA4"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:fillViewport="false"
+                android:overScrollMode="ifContentScrolls">
 
                 <LinearLayout
                     android:id="@+id/listHigh"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
                     android:orientation="vertical"
                     tools:ignore="NestedWeights" />
-            </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@drawable/bg_matrix_quadrant"
+            android:minHeight="0dp"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvMatrixMediumTitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_rowWeight="1"
-                android:background="@drawable/bg_matrix_quadrant"
-                android:minHeight="280dp"
-                android:orientation="vertical"
-                android:padding="12dp">
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="II  Not Urgent &amp; Important"
+                android:textColor="#FFB627"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tvMatrixMediumTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:text="II  Not Urgent &amp; Important"
-                    android:textColor="#FFB627"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:fillViewport="false"
+                android:overScrollMode="ifContentScrolls">
 
                 <LinearLayout
                     android:id="@+id/listMedium"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
                     android:orientation="vertical" />
-            </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@drawable/bg_matrix_quadrant"
+            android:minHeight="0dp"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvMatrixLowTitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_rowWeight="1"
-                android:background="@drawable/bg_matrix_quadrant"
-                android:minHeight="280dp"
-                android:orientation="vertical"
-                android:padding="12dp">
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="III  Urgent &amp; Unimportant"
+                android:textColor="#26C6DA"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tvMatrixLowTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:text="III  Urgent &amp; Unimportant"
-                    android:textColor="#5077FF"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:fillViewport="false"
+                android:overScrollMode="ifContentScrolls">
 
                 <LinearLayout
                     android:id="@+id/listLow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
                     android:orientation="vertical" />
-            </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:background="@drawable/bg_matrix_quadrant"
+            android:minHeight="0dp"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvMatrixNoneTitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_rowWeight="1"
-                android:background="@drawable/bg_matrix_quadrant"
-                android:minHeight="280dp"
-                android:orientation="vertical"
-                android:padding="12dp">
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="IV  Not Urgent &amp; Unimportant"
+                android:textColor="#8F969E"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tvMatrixNoneTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:text="IV  Not Urgent &amp; Unimportant"
-                    android:textColor="#27C7A8"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:fillViewport="false"
+                android:overScrollMode="ifContentScrolls">
 
                 <LinearLayout
                     android:id="@+id/listNone"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
                     android:orientation="vertical" />
-            </LinearLayout>
-        </GridLayout>
-    </ScrollView>
+            </ScrollView>
+        </LinearLayout>
+    </GridLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnMatrixAddTask"

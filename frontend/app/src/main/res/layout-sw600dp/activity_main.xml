@@ -5,6 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorBackground"
     tools:context=".ui.activity.MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -17,7 +18,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/colorPrimary"
+            android:background="@color/colorBackground"
             app:contentInsetStart="0dp"
             app:contentInsetStartWithNavigation="0dp"
             app:title="">
@@ -34,36 +35,57 @@
                     android:id="@+id/btnToggleSidebar"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_toolbar_menu_button"
+                    android:background="@drawable/bg_task_editor_icon_button"
                     android:contentDescription="@string/toggle_sidebar"
-                    android:padding="8dp"
+                    android:padding="11dp"
                     android:scaleType="center"
-                    android:src="@drawable/ic_hamburger_large" />
+                    android:src="@drawable/ic_hamburger_large"
+                    app:tint="#D7DDE5" />
 
-                <TextView
-                    android:id="@+id/tvSelectedFilter"
+                <LinearLayout
+                    android:id="@+id/toolbarTitleGroup"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:singleLine="true"
                     android:gravity="center"
-                    android:text="All"
-                    android:textColor="@color/colorOnPrimary"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/ivToolbarTitleIcon"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:contentDescription="@string/task_editor_category"
+                        android:src="@drawable/ic_nav_task_outline"
+                        android:visibility="gone"
+                        app:tint="#D7DDE5" />
+
+                    <TextView
+                        android:id="@+id/tvSelectedFilter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:maxWidth="220dp"
+                        android:singleLine="true"
+                        android:text="All"
+                        android:textColor="#F2F4F7"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <ImageButton
                     android:id="@+id/btnToolbarMore"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="12dp"
-                    android:background="@drawable/bg_toolbar_menu_button"
+                    android:background="@drawable/bg_task_editor_icon_button"
                     android:contentDescription="@string/toolbar_more_options"
-                    android:padding="8dp"
+                    android:padding="10dp"
                     android:scaleType="center"
-                    android:src="@drawable/ic_more_horizontal" />
+                    android:src="@drawable/ic_more_horizontal"
+                    app:tint="#D7DDE5" />
             </LinearLayout>
         </com.google.android.material.appbar.MaterialToolbar>
     </com.google.android.material.appbar.AppBarLayout>
@@ -103,7 +125,7 @@
         android:id="@+id/sidebarPanel"
         android:layout_width="320dp"
         android:layout_height="0dp"
-        android:background="@color/colorSurface"
+        android:background="@drawable/bg_sidebar_panel"
         android:elevation="16dp"
         android:orientation="vertical"
         android:visibility="gone"
@@ -117,4 +139,17 @@
             android:layout_height="match_parent"
             tools:listitem="@layout/list_item_sidebar" />
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/fullScreenFragmentContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clickable="true"
+        android:elevation="48dp"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -22,7 +22,13 @@
         <item name="android:layout_marginBottom">16dp</item>
         <item name="backgroundTint">@color/colorAddAction</item>
         <item name="srcCompat">@drawable/ic_add</item>
-        <item name="tint">@color/white</item>
+        <item name="tint">@color/colorOnPrimary</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.TaskManager.AddFab</item>
+    </style>
+
+    <style name="ShapeAppearance.TaskManager.AddFab" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
 
     <style name="Widget.TaskManager.CompleteCheckBox" parent="@android:style/Widget.CompoundButton.CheckBox">

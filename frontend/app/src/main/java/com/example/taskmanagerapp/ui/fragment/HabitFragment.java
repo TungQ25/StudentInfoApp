@@ -44,10 +44,6 @@ import java.util.Set;
 public class HabitFragment extends Fragment implements MainActivity.HabitToolbarController {
     private static final String FILTER_ALL = "all";
 
-    private static final int COLOR_SURFACE = Color.rgb(24, 24, 26);
-    private static final int COLOR_MUTED = Color.rgb(134, 134, 139);
-    private static final int COLOR_ORANGE = Color.rgb(255, 122, 24);
-
     private final List<Habit> habits = new ArrayList<>();
     private final Set<String> completedPeriodKeys = new HashSet<>();
     private final Calendar selectedDate = Calendar.getInstance();
@@ -152,7 +148,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
             TextView dayLabel = new TextView(requireContext());
             dayLabel.setGravity(Gravity.CENTER);
             dayLabel.setText(new SimpleDateFormat("E", Locale.US).format(day.getTime()).substring(0, 1)); // Lấy ký tự đầu của thứ
-            dayLabel.setTextColor(COLOR_MUTED);
+            dayLabel.setTextColor(mutedColor());
             dayLabel.setTextSize(16f);
             dayColumn.addView(
                     dayLabel,
@@ -169,10 +165,10 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
             TextView dateLabel = new TextView(requireContext());
             dateLabel.setGravity(Gravity.CENTER);
             dateLabel.setText(String.valueOf(day.get(Calendar.DAY_OF_MONTH)));
-            dateLabel.setTextColor(isSelected ? Color.WHITE : Color.rgb(214, 214, 220));
+            dateLabel.setTextColor(isSelected ? onPrimaryColor() : onSurfaceColor());
             dateLabel.setTextSize(20f);
             dateLabel.setTypeface(Typeface.DEFAULT, isSelected ? Typeface.BOLD : Typeface.NORMAL);
-            if (isSelected) dateLabel.setBackground(circleDrawable(COLOR_ORANGE));
+            if (isSelected) dateLabel.setBackground(circleDrawable(accentColor()));
 
             LinearLayout.LayoutParams dateParams = new LinearLayout.LayoutParams(dp(54), dp(54));
             dateParams.topMargin = dp(14);
@@ -196,10 +192,10 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView chip = new TextView(requireContext());
         chip.setGravity(Gravity.CENTER);
         chip.setText(label);
-        chip.setTextColor(selected ? Color.WHITE : COLOR_MUTED);
+        chip.setTextColor(selected ? onPrimaryColor() : mutedColor());
         chip.setTextSize(14f);
         chip.setTypeface(Typeface.DEFAULT, selected ? Typeface.BOLD : Typeface.NORMAL);
-        chip.setBackground(roundedDrawable(selected ? COLOR_ORANGE : COLOR_SURFACE, dp(22)));
+        chip.setBackground(roundedDrawable(selected ? accentColor() : surfaceColor(), dp(22)));
         chip.setOnClickListener(v -> {
             selectedFilter = filter;
             renderFilterStrip();
@@ -253,7 +249,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
 
         TextView titleView = new TextView(requireContext());
         titleView.setText(title);
-        titleView.setTextColor(Color.WHITE);
+        titleView.setTextColor(onSurfaceColor());
         titleView.setTextSize(24f);
         titleView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         header.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -261,7 +257,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView countView = new TextView(requireContext());
         countView.setText(String.valueOf(sectionHabits.size()));
         countView.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
-        countView.setTextColor(Color.rgb(82, 82, 88));
+        countView.setTextColor(mutedColor());
         countView.setTextSize(18f);
         header.addView(countView, new LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -285,10 +281,10 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView icon = new TextView(requireContext());
         icon.setGravity(Gravity.CENTER);
         icon.setText(initials(habit.getTitle()));
-        icon.setTextColor(Color.WHITE);
+        icon.setTextColor(onPrimaryColor());
         icon.setTextSize(12f);
         icon.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        icon.setBackground(circleDrawable(completed ? COLOR_ORANGE : habit.getColor()));
+        icon.setBackground(circleDrawable(completed ? accentColor() : habit.getColor()));
         row.addView(icon, new LinearLayout.LayoutParams(dp(46), dp(46)));
 
         LinearLayout titleColumn = new LinearLayout(requireContext());
@@ -299,7 +295,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
 
         TextView title = new TextView(requireContext());
         title.setText(habit.getTitle());
-        title.setTextColor(completed ? COLOR_ORANGE : Color.WHITE);
+        title.setTextColor(completed ? accentColor() : onSurfaceColor());
         title.setTextSize(22f);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setSingleLine(false);
@@ -307,7 +303,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
 
         TextView frequency = new TextView(requireContext());
         frequency.setText(labelForFrequency(habit.getFrequency()));
-        frequency.setTextColor(COLOR_MUTED);
+        frequency.setTextColor(mutedColor());
         frequency.setTextSize(13f);
         titleColumn.addView(frequency, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -319,7 +315,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView totalDays = new TextView(requireContext());
         totalDays.setGravity(Gravity.END);
         totalDays.setText(String.valueOf(habit.getTotalDays()));
-        totalDays.setTextColor(completed ? COLOR_ORANGE : Color.WHITE);
+        totalDays.setTextColor(completed ? accentColor() : onSurfaceColor());
         totalDays.setTextSize(25f);
         totalDays.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         statColumn.addView(totalDays, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -327,7 +323,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView label = new TextView(requireContext());
         label.setGravity(Gravity.END);
         label.setText(completed ? "Done" : "Total Days");
-        label.setTextColor(COLOR_MUTED);
+        label.setTextColor(mutedColor());
         label.setTextSize(14f);
         statColumn.addView(label, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -368,8 +364,8 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
                 .create();
 
         dialog.setOnShowListener(d -> {
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(COLOR_ORANGE);
-            dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(COLOR_MUTED);
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(accentColor());
+            dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(mutedColor());
             dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
                 String title = titleInput.getText().toString().trim();
                 if (title.isEmpty()) {
@@ -482,7 +478,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
                 Color.rgb(255, 132, 169),
                 Color.rgb(255, 210, 79),
                 Color.rgb(177, 106, 236),
-                Color.rgb(255, 178, 88),
+                Color.rgb(71, 191, 179),
                 Color.rgb(92, 178, 255),
                 Color.rgb(72, 199, 142)
         };
@@ -499,7 +495,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
     private GradientDrawable circleDrawable(int color) {
         GradientDrawable drawable = new GradientDrawable();
         drawable.setShape(GradientDrawable.OVAL);
-        drawable.setColor(color == 0 ? COLOR_ORANGE : color);
+        drawable.setColor(color == 0 ? accentColor() : color);
         return drawable;
     }
 
@@ -523,5 +519,29 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private int accentColor() {
+        return color(R.color.colorAddAction);
+    }
+
+    private int surfaceColor() {
+        return color(R.color.colorSurface);
+    }
+
+    private int onPrimaryColor() {
+        return color(R.color.colorOnPrimary);
+    }
+
+    private int onSurfaceColor() {
+        return color(R.color.colorOnSurface);
+    }
+
+    private int mutedColor() {
+        return color(R.color.colorOnSurfaceVariant);
+    }
+
+    private int color(int colorRes) {
+        return requireContext().getColor(colorRes);
     }
 }

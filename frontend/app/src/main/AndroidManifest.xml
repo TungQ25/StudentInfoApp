@@ -32,7 +32,7 @@
             android:name=".ui.activity.AddTaskActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activity.TaskDetailActivity"
+            android:name=".ui.activity.GeneralSettingsActivity"
             android:exported="false" />
         <activity
             android:name=".ui.activity.MainActivity"
