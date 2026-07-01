@@ -11,7 +11,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public final class RetrofitClient {
-    private static final String BASE_URL = "http://192.168.1.3:8080/"; // TODO: thay tạm bằng ip máy tính để test, đổi lại khi deploy app
+    private static final String BASE_URL = "https://taskmanagerapp-zkkh.onrender.com/";
 
     private static volatile Retrofit retrofit;
     private static volatile Context appContext;
