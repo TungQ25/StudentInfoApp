@@ -2,17 +2,18 @@ package com.example.taskmanagerapp.ui.activity;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -45,9 +46,11 @@ public class MainActivity extends AppCompatActivity {
     private View appBarLayout;
     private MaterialToolbar toolbar;
     private TextView toolbarTitle;
+    private ImageView toolbarTitleIcon;
     private ImageButton toolbarLeftButton;
     private ImageButton toolbarRightButton;
     private View bottomNavigation;
+    private View fullScreenFragmentContainer;
     private TaskToolbarController taskToolbarController;
     private HabitToolbarController habitToolbarController;
     private PreferenceHelper preferenceHelper;
@@ -92,12 +95,15 @@ public class MainActivity extends AppCompatActivity {
         } else {
             applyBottomNavigationState(selectedBottomNavItem);
         }
+        getSupportFragmentManager().addOnBackStackChangedListener(this::updateFullScreenFragmentContainer);
+        updateFullScreenFragmentContainer();
     }
 
     private void initializeViews() {
         appBarLayout = findViewById(R.id.appBarLayout);
         toolbar = findViewById(R.id.toolbar);
         toolbarTitle = findViewById(R.id.tvSelectedFilter);
+        toolbarTitleIcon = findViewById(R.id.ivToolbarTitleIcon);
         toolbarLeftButton = findViewById(R.id.btnToggleSidebar);
         toolbarRightButton = findViewById(R.id.btnToolbarMore);
         if (toolbarLeftButton != null) {
@@ -119,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         bottomNavigation = findViewById(R.id.bottomNavigation);
+        fullScreenFragmentContainer = findViewById(R.id.fullScreenFragmentContainer);
         preferenceHelper = new PreferenceHelper(this);
         appliedTheme = preferenceHelper.getTheme();
     }
@@ -209,6 +216,7 @@ public class MainActivity extends AppCompatActivity {
                 R.string.toolbar_more_options,
                 View.VISIBLE
         );
+        setToolbarTitleIconVisible(true);
     }
 
     public void showMatrixToolbar(String title, TaskToolbarController controller) {
@@ -229,6 +237,19 @@ public class MainActivity extends AppCompatActivity {
         if (toolbarTitle != null) {
             toolbarTitle.setText(title == null || title.trim().isEmpty() ? "All" : title);
         }
+    }
+
+    public void showFullScreenFragment(Fragment fragment) {
+        if (fragment == null || fullScreenFragmentContainer == null) {
+            return;
+        }
+        fullScreenFragmentContainer.setVisibility(View.VISIBLE);
+        fullScreenFragmentContainer.bringToFront();
+        getSupportFragmentManager().beginTransaction()
+                .setReorderingAllowed(true)
+                .replace(R.id.fullScreenFragmentContainer, fragment)
+                .addToBackStack("fullScreenFragment")
+                .commit();
     }
 
     public void clearTaskToolbarController(TaskToolbarController controller) {
@@ -254,6 +275,7 @@ public class MainActivity extends AppCompatActivity {
         if (toolbar != null) {
             toolbar.setTitle("");
         }
+        setToolbarTitleIconVisible(false);
         setToolbarButton(toolbarLeftButton, leftIconRes, leftDescriptionRes, leftVisibility);
         setToolbarButton(toolbarRightButton, rightIconRes, rightDescriptionRes, rightVisibility);
         setTaskToolbarTitle(title);
@@ -264,14 +286,37 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         button.setImageResource(iconRes);
-        button.setColorFilter(ContextCompat.getColor(this, R.color.colorOnPrimary));
+        button.setColorFilter(Color.rgb(215, 221, 229));
         button.setContentDescription(getString(descriptionRes));
         button.setVisibility(visibility);
+    }
+
+    private void setToolbarTitleIconVisible(boolean visible) {
+        if (toolbarTitleIcon != null) {
+            toolbarTitleIcon.setVisibility(visible ? View.VISIBLE : View.GONE);
+            toolbarTitleIcon.setColorFilter(Color.rgb(215, 221, 229));
+        }
+        if (toolbarTitle != null) {
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) toolbarTitle.getLayoutParams();
+            params.leftMargin = visible ? dp(8) : 0;
+            toolbarTitle.setLayoutParams(params);
+        }
     }
 
     private void showMainToolbar() {
         if (appBarLayout != null) {
             appBarLayout.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void updateFullScreenFragmentContainer() {
+        if (fullScreenFragmentContainer == null) {
+            return;
+        }
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fullScreenFragmentContainer);
+        fullScreenFragmentContainer.setVisibility(fragment == null ? View.GONE : View.VISIBLE);
+        if (fragment != null) {
+            fullScreenFragmentContainer.bringToFront();
         }
     }
 
@@ -289,6 +334,10 @@ public class MainActivity extends AppCompatActivity {
                 item.setSelected(itemId == selectedItemId);
             }
         }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override
