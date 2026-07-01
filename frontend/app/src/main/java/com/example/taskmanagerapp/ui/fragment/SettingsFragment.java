@@ -1,6 +1,7 @@
 package com.example.taskmanagerapp.ui.fragment;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -25,8 +26,9 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.example.taskmanagerapp.R;
-import com.example.taskmanagerapp.ui.activity.MainActivity;
+import com.example.taskmanagerapp.ui.activity.GeneralSettingsActivity;
 import com.example.taskmanagerapp.ui.activity.LoginActivity;
+import com.example.taskmanagerapp.ui.activity.MainActivity;
 import com.example.taskmanagerapp.utils.PreferenceHelper;
 
 public class SettingsFragment extends Fragment {
@@ -39,8 +41,6 @@ public class SettingsFragment extends Fragment {
 
     private FrameLayout root;
     private View mainPage;
-    private View generalPage;
-    private View accountPage;
     private PreferenceHelper preferenceHelper;
 
     @Nullable
@@ -49,13 +49,10 @@ public class SettingsFragment extends Fragment {
         preferenceHelper = new PreferenceHelper(requireContext());
         root = new FrameLayout(requireContext());
         root.setBackgroundColor(color(R.color.colorBackground));
+
         mainPage = createMainPage();
-        generalPage = createGeneralPage();
-        accountPage = createAccountPage();
+
         root.addView(mainPage);
-        root.addView(generalPage);
-        root.addView(accountPage);
-        showPage(mainPage);
         return root;
     }
 
@@ -68,163 +65,144 @@ public class SettingsFragment extends Fragment {
     }
 
     private View createMainPage() {
+        FrameLayout page = new FrameLayout(requireContext());
+
         LinearLayout content = pageContent();
-        content.addView(accountHeader());
-        content.addView(space(22));
-        content.addView(singleCardRow("TB", "Tab Bar", v -> notImplemented("Tab Bar")));
+        content.setPadding(dp(14), dp(14), dp(14), dp(118));
+        content.addView(profileCard());
+        content.addView(space(18));
+
+        LinearLayout appearanceGroup = cardContainer();
+        appearanceGroup.addView(settingsRow("AP", "Appearance", themeSummary(), v -> showThemeDialog(), true));
+        appearanceGroup.addView(divider());
+        appearanceGroup.addView(notificationRow());
+        content.addView(appearanceGroup);
         content.addView(space(16));
 
-        // TODO: cập nhật icon UI
-        LinearLayout group = cardContainer();
-        group.addView(settingsRow("AP", "Appearance", null, v -> showThemeDialog(), false));
-        group.addView(settingsRow("SN", "Sounds & Notifications", notificationSummary(), v -> toggleNotifications(), false));
-        group.addView(settingsRow("DT", "Date & Time", null, v -> notImplemented("Date & Time"), false));
-        group.addView(settingsRow("GN", "General", null, v -> showPage(generalPage), false));
-        content.addView(group);
-        return scrollPage(content);
+        LinearLayout generalGroup = cardContainer();
+        generalGroup.addView(settingsRow("DT", "Date & Time", null, v -> notImplemented("Date & Time"), true));
+        generalGroup.addView(divider());
+        generalGroup.addView(settingsRow("GN", "General", null, v -> openGeneralSettings(), true));
+        content.addView(generalGroup);
+        content.addView(space(16));
+
+        LinearLayout aboutGroup = cardContainer();
+        aboutGroup.addView(settingsRow("AB", "About", "v1.0", v -> Toast.makeText(requireContext(), "TaskManagerApp v1.0", Toast.LENGTH_SHORT).show(), true));
+        content.addView(aboutGroup);
+
+        ScrollView scrollView = new ScrollView(requireContext());
+        scrollView.setClipToPadding(false);
+        scrollView.addView(content, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        page.addView(scrollView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        FrameLayout.LayoutParams signOutParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM
+        );
+        signOutParams.setMargins(dp(18), 0, dp(18), dp(18));
+        page.addView(signOutButton(), signOutParams);
+        return page;
     }
 
-    private View createGeneralPage() {
-        LinearLayout content = pageContent();
-        content.addView(header("General", v -> showPage(mainPage), null));
-
-        LinearLayout topGroup = cardContainer();
-        topGroup.addView(settingsRow(null, "Language", "English", v -> notImplemented("Language"), false));
-        topGroup.addView(settingsRow(null, "Swipe Actions", null, v -> notImplemented("Swipe Actions"), false));
-        topGroup.addView(taskContextMenuRow());
-        content.addView(topGroup);
-        content.addView(space(16));
-
-        content.addView(singleCardRow(null, "Task Detail Page", v -> notImplemented("Task Detail Page")));
-        content.addView(space(16));
-
-        LinearLayout taskGroup = cardContainer();
-        taskGroup.addView(settingsRow(null, "Smart Recognition", null, v -> notImplemented("Smart Recognition"), false));
-        taskGroup.addView(settingsRow(null, "Task Quick Add", null, v -> notImplemented("Task Quick Add"), false));
-        taskGroup.addView(settingsRow(null, "Task Default", null, v -> notImplemented("Task Default"), false));
-        taskGroup.addView(settingsRow(null, "Upload/Download Attachments", null, v -> notImplemented("Attachments"), false));
-        taskGroup.addView(settingsRow(null, "Collaborate", null, v -> notImplemented("Collaborate"), false));
-        taskGroup.addView(settingsRow(null, "Manage Template", null, v -> notImplemented("Manage Template"), false));
-        content.addView(taskGroup);
-        content.addView(space(16));
-
-        content.addView(singleCardRow(null, "Passcode & Face ID", v -> notImplemented("Passcode & Face ID")));
-        content.addView(space(28));
-        content.addView(logoutButton());
-        content.addView(space(24));
-        return scrollPage(content);
-    }
-
-    private View createAccountPage() {
-        LinearLayout content = pageContent();
-        content.addView(header("Account", v -> showPage(mainPage), "OK"));
-
-        LinearLayout accountGroup = cardContainer();
-        accountGroup.addView(accountRow("Avatar", "TM", v -> notImplemented("Avatar")));
-        accountGroup.addView(settingsRow(null, "Nickname", displayName(), v -> notImplemented("Nickname"), true));
-        accountGroup.addView(settingsRow(null, "Email", displayEmail(), v -> notImplemented("Email"), true));
-        accountGroup.addView(settingsRow(null, "Create Passkey", null, v -> notImplemented("Passkey"), false));
-        accountGroup.addView(settingsRow(null, "2-Step Verification", null, v -> notImplemented("2-Step Verification"), false));
-        accountGroup.addView(settingsRow(null, "Device Management", null, v -> notImplemented("Device Management"), false));
-        content.addView(accountGroup);
-
-        Space fill = new Space(requireContext());
-        content.addView(fill, new LinearLayout.LayoutParams(1, dp(220)));
-        content.addView(deleteAccountButton());
-        content.addView(space(24));
-        return scrollPage(content);
-    }
-
-    private View accountHeader() {
+    private View profileCard() {
+        LinearLayout card = cardContainer();
         LinearLayout row = new LinearLayout(requireContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(8), dp(22), dp(8), dp(22));
-        row.setOnClickListener(v -> showPage(accountPage));
+        row.setPadding(dp(16), dp(14), dp(12), dp(14));
+        row.setMinimumHeight(dp(88));
+        row.setOnClickListener(v -> openAccountFragment());
+        card.addView(row);
 
-        TextView avatar = avatarView(dp(96), displayInitials(), 28);
-        row.addView(avatar);
+        row.addView(avatarView(dp(54), displayInitials(), 17));
 
         LinearLayout textColumn = new LinearLayout(requireContext());
         textColumn.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        textParams.setMargins(dp(18), 0, dp(8), 0);
+        textParams.setMargins(dp(16), 0, dp(8), 0);
         row.addView(textColumn, textParams);
 
-        TextView name = label(displayName(), 28, Color.WHITE, true);
+        TextView name = label(displayName(), 16, color(R.color.colorOnSurface), true);
+        name.setSingleLine(true);
         textColumn.addView(name);
 
+        TextView email = label(displayEmail(), 13, color(R.color.colorOnSurfaceVariant), false);
+        email.setPadding(0, dp(6), 0, 0);
+        email.setSingleLine(true);
+        textColumn.addView(email);
+
         row.addView(arrow());
-        return row;
+        return card;
     }
 
-    private View taskContextMenuRow() {
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(22), dp(14), dp(18), dp(14));
+    private View notificationRow() {
+        LinearLayout row = baseRow();
+        row.setOnClickListener(null);
+        row.addView(rowIcon("NT"));
 
-        LinearLayout texts = new LinearLayout(requireContext());
-        texts.setOrientation(LinearLayout.VERTICAL);
-        row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        texts.addView(label("Task Context Menu", 21, Color.WHITE, false));
-        TextView summary = label("Long press task and habit to show context menu.", 14, Color.rgb(132, 132, 132), false);
-        summary.setPadding(0, dp(6), dp(12), 0);
-        texts.addView(summary);
+        TextView titleView = label("Notifications", 16, color(R.color.colorOnSurface), false);
+        row.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         Switch toggle = new Switch(requireContext());
-        toggle.setChecked(true);
-        toggle.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
-                Toast.makeText(requireContext(), isChecked ? "Context menu enabled" : "Context menu disabled", Toast.LENGTH_SHORT).show());
+        toggle.setChecked(preferenceHelper.isNotificationsEnabled());
+        tintSwitch(toggle);
+        toggle.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) -> {
+            preferenceHelper.setNotificationsEnabled(isChecked);
+            Toast.makeText(requireContext(), isChecked ? "Notifications enabled" : "Notifications disabled", Toast.LENGTH_SHORT).show();
+        });
+        row.setOnClickListener(v -> toggle.setChecked(!toggle.isChecked()));
         row.addView(toggle);
         return row;
     }
 
-    private View settingsRow(String icon, String title, String value, View.OnClickListener listener, boolean dimValue) {
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(22), dp(18), dp(18), dp(18));
-        row.setMinimumHeight(dp(74));
-        row.setOnClickListener(listener);
-
-        if (icon != null) {
-            TextView iconView = label(icon, 18, Color.rgb(255, 122, 26), true);
-            iconView.setGravity(Gravity.CENTER);
-            row.addView(iconView, new LinearLayout.LayoutParams(dp(50), dp(40)));
+    private View settingsRow(String icon, String title, String value, View.OnClickListener listener, boolean showArrow) {
+        LinearLayout row = baseRow();
+        if (listener != null) {
+            row.setOnClickListener(listener);
         }
 
-        TextView titleView = label(title, 23, Color.WHITE, false);
+        if (icon != null) {
+            row.addView(rowIcon(icon));
+        }
+
+        TextView titleView = label(title, 16, color(R.color.colorOnSurface), false);
         row.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         if (value != null) {
-            TextView valueView = label(value, 20, Color.rgb(132, 132, 132), false);
+            TextView valueView = label(value, 14, color(R.color.colorOnSurfaceVariant), false);
             valueView.setGravity(Gravity.END);
             valueView.setSingleLine(true);
-            valueView.setAlpha(dimValue ? 0.75f : 1f);
-            row.addView(valueView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f);
+            valueParams.setMargins(dp(8), 0, 0, 0);
+            row.addView(valueView, valueParams);
         }
-        row.addView(arrow());
+
+        if (showArrow) {
+            row.addView(arrow());
+        }
         return row;
     }
 
-    private View accountRow(String title, String initials, View.OnClickListener listener) {
+    private LinearLayout baseRow() {
         LinearLayout row = new LinearLayout(requireContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(22), dp(14), dp(18), dp(14));
-        row.setMinimumHeight(dp(76));
-        row.setOnClickListener(listener);
-        row.addView(label(title, 23, Color.WHITE, false), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        row.addView(avatarView(dp(52), initials, 14));
-        row.addView(arrow());
+        row.setPadding(dp(18), dp(12), dp(14), dp(12));
+        row.setMinimumHeight(dp(58));
+        row.setClickable(true);
+        row.setFocusable(true);
         return row;
     }
 
-    private View singleCardRow(String icon, String title, View.OnClickListener listener) {
-        LinearLayout card = cardContainer();
-        card.addView(settingsRow(icon, title, null, listener, false));
-        return card;
+    private TextView rowIcon(String text) {
+        TextView iconView = label(text, 11, color(R.color.colorAddAction), true);
+        iconView.setGravity(Gravity.CENTER);
+        iconView.setBackground(roundedDrawable(color(R.color.colorPrimaryContainer), dp(10)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(34), dp(34));
+        params.setMargins(0, 0, dp(14), 0);
+        iconView.setLayoutParams(params);
+        return iconView;
     }
 
     private LinearLayout cardContainer() {
@@ -235,45 +213,18 @@ public class SettingsFragment extends Fragment {
         return card;
     }
 
-    private View header(String title, View.OnClickListener backListener, String actionText) {
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(8), 0, dp(24));
-
-        TextView back = circularButton("<", 28, Color.WHITE, Color.rgb(31, 31, 31));
-        back.setOnClickListener(backListener);
-        row.addView(back);
-
-        TextView titleView = label(title, 22, Color.WHITE, true);
-        titleView.setGravity(Gravity.CENTER);
-        row.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView action = circularButton(actionText == null ? "" : actionText, 15, Color.WHITE, actionText == null ? Color.TRANSPARENT : Color.rgb(255, 122, 26));
-        row.addView(action);
-        return row;
-    }
-
-    private TextView logoutButton() {
-        TextView button = label("Log out", 20, Color.rgb(255, 122, 26), true);
+    private TextView signOutButton() {
+        TextView button = label("Sign Out", 16, color(R.color.colorOnDanger), true);
         button.setGravity(Gravity.CENTER);
-        button.setBackgroundResource(R.drawable.bg_settings_card);
-        button.setPadding(dp(18), dp(18), dp(18), dp(18));
+        button.setBackgroundResource(R.drawable.bg_settings_logout);
+        button.setPadding(dp(18), dp(15), dp(18), dp(15));
+        button.setMinHeight(dp(54));
         button.setOnClickListener(v -> logout());
         return button;
     }
 
-    private TextView deleteAccountButton() {
-        TextView button = label("Delete Account", 20, Color.rgb(255, 76, 84), true);
-        button.setGravity(Gravity.CENTER);
-        button.setBackgroundResource(R.drawable.bg_settings_logout);
-        button.setPadding(dp(18), dp(18), dp(18), dp(18));
-        button.setOnClickListener(v -> notImplemented("Delete Account"));
-        return button;
-    }
-
     private TextView avatarView(int size, String text, int textSize) {
-        TextView avatar = label(text, textSize, Color.rgb(70, 70, 70), true);
+        TextView avatar = label(text, textSize, color(R.color.colorAddAction), true);
         avatar.setGravity(Gravity.CENTER);
         avatar.setBackgroundResource(R.drawable.bg_settings_avatar);
         avatar.setMinWidth(size);
@@ -282,33 +233,18 @@ public class SettingsFragment extends Fragment {
     }
 
     private TextView arrow() {
-        TextView arrow = label(">", 28, Color.rgb(112, 112, 112), false);
+        TextView arrow = label(">", 20, color(R.color.colorOnSurfaceVariant), false);
         arrow.setGravity(Gravity.CENTER);
         arrow.setPadding(dp(10), 0, 0, 0);
         return arrow;
     }
 
-    private TextView circularButton(String text, int textSize, int textColor, int fillColor) {
-        TextView button = label(text, textSize, textColor, true);
-        button.setGravity(Gravity.CENTER);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(fillColor);
-        if (fillColor != Color.TRANSPARENT) {
-            bg.setStroke(dp(1), Color.rgb(55, 55, 55));
-        }
-        button.setBackground(bg);
-        button.setMinWidth(dp(64));
-        button.setMinHeight(dp(64));
-        return button;
-    }
-
-    private TextView label(String text, int sp, int color, boolean bold) {
+    private TextView label(String text, int sp, int textColor, boolean bold) {
         TextView view = new TextView(requireContext());
         view.setText(text);
         view.setTextSize(sp);
-        view.setTextColor(color);
-        view.setIncludeFontPadding(true);
+        view.setTextColor(textColor);
+        view.setIncludeFontPadding(false);
         if (bold) {
             view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         }
@@ -318,15 +254,15 @@ public class SettingsFragment extends Fragment {
     private LinearLayout pageContent() {
         LinearLayout content = new LinearLayout(requireContext());
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(18), dp(28), dp(18), dp(18));
+        content.setPadding(dp(14), dp(16), dp(14), dp(18));
         return content;
     }
 
-    private ScrollView scrollPage(LinearLayout content) {
-        ScrollView scrollView = new ScrollView(requireContext());
-        scrollView.setClipToPadding(false);
-        scrollView.addView(content, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        return scrollView;
+    private View divider() {
+        View divider = new View(requireContext());
+        divider.setBackgroundColor(color(R.color.colorDivider));
+        divider.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+        return divider;
     }
 
     private Space space(int dp) {
@@ -335,10 +271,37 @@ public class SettingsFragment extends Fragment {
         return space;
     }
 
-    private void showPage(View page) {
-        mainPage.setVisibility(page == mainPage ? View.VISIBLE : View.GONE);
-        generalPage.setVisibility(page == generalPage ? View.VISIBLE : View.GONE);
-        accountPage.setVisibility(page == accountPage ? View.VISIBLE : View.GONE);
+    private GradientDrawable roundedDrawable(int fillColor, int radius) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.RECTANGLE);
+        drawable.setColor(fillColor);
+        drawable.setCornerRadius(radius);
+        return drawable;
+    }
+
+    private void tintSwitch(Switch toggle) {
+        int[][] states = new int[][]{
+                new int[]{android.R.attr.state_checked},
+                new int[]{}
+        };
+        toggle.setThumbTintList(new ColorStateList(states, new int[]{
+                color(R.color.colorOnPrimary),
+                color(R.color.colorOnSurfaceVariant)
+        }));
+        toggle.setTrackTintList(new ColorStateList(states, new int[]{
+                color(R.color.colorAddAction),
+                color(R.color.colorSurfaceVariant)
+        }));
+    }
+
+    private void openAccountFragment() {
+        if (requireActivity() instanceof MainActivity) {
+            ((MainActivity) requireActivity()).showFullScreenFragment(new AccountFragment());
+        }
+    }
+
+    private void openGeneralSettings() {
+        startActivity(new Intent(requireContext(), GeneralSettingsActivity.class));
     }
 
     private void showThemeDialog() {
@@ -363,14 +326,14 @@ public class SettingsFragment extends Fragment {
                 .show();
     }
 
-    private void toggleNotifications() {
-        boolean enabled = !preferenceHelper.isNotificationsEnabled();
-        preferenceHelper.setNotificationsEnabled(enabled);
-        Toast.makeText(requireContext(), enabled ? "Notifications enabled" : "Notifications disabled", Toast.LENGTH_SHORT).show();
-    }
-
-    private String notificationSummary() {
-        return preferenceHelper.isNotificationsEnabled() ? "On" : "Off";
+    private String themeSummary() {
+        String currentTheme = preferenceHelper.getTheme();
+        for (int i = 0; i < THEME_KEYS.length; i++) {
+            if (THEME_KEYS[i].equals(currentTheme)) {
+                return THEME_LABELS[i];
+            }
+        }
+        return "System";
     }
 
     private String displayName() {
@@ -385,7 +348,9 @@ public class SettingsFragment extends Fragment {
 
     private String displayInitials() {
         String name = displayName().trim();
-        if (name.isEmpty()) return "U";
+        if (name.isEmpty()) {
+            return "U";
+        }
         String[] parts = name.split("\\s+");
         if (parts.length == 1) {
             return parts[0].substring(0, 1).toUpperCase();
@@ -428,7 +393,5 @@ public class SettingsFragment extends Fragment {
         super.onDestroyView();
         root = null;
         mainPage = null;
-        generalPage = null;
-        accountPage = null;
     }
 }
