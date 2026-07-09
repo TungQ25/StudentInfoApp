@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import java.util.UUID;
+
 public class PreferenceHelper {
     private static final String TAG = "PreferenceHelper";
     public static final String PREF_NAME = "student_task_manager_prefs";
@@ -15,6 +17,10 @@ public class PreferenceHelper {
     public static final String KEY_AUTH_USER_ID = "auth_user_id";
     public static final String KEY_AUTH_USERNAME = "auth_username";
     public static final String KEY_AUTH_EMAIL = "auth_email";
+    public static final String KEY_AUTH_REFRESH_TOKEN = "auth_refresh_token";
+    public static final String KEY_AUTH_REFRESH_EXPIRES_AT = "auth_refresh_expires_at";
+    public static final String KEY_AUTH_DEVICE_ID = "auth_device_id";
+    public static final String KEY_AUTH_SESSION_ID = "auth_session_id";
     public static final String KEY_SELECTED_TASK_FILTER_ID = "selected_task_filter_id";
     public static final String KEY_SELECTED_TASK_FILTER_TITLE = "selected_task_filter_title";
     public static final String KEY_SIDEBAR_SMART_FILTER_ORDER = "sidebar_smart_filter_order";
@@ -64,7 +70,6 @@ public class PreferenceHelper {
         return value;
     }
 
-
     public void setSelectedTaskFilter(String filterId, String title) {
         preferences.edit()
                 .putString(KEY_SELECTED_TASK_FILTER_ID, filterId)
@@ -100,17 +105,57 @@ public class PreferenceHelper {
     }
 
     public void saveAuth(String token, String userId, String username, String email) {
-        preferences.edit()
+        saveAuth(token, userId, username, email, null, 0L, null, null);
+    }
+
+    public void saveAuth(
+            String token,
+            String userId,
+            String username,
+            String email,
+            String refreshToken,
+            long refreshExpiresAt,
+            String deviceId,
+            String sessionId) {
+        SharedPreferences.Editor editor = preferences.edit()
                 .putString(KEY_AUTH_TOKEN, token)
                 .putString(KEY_AUTH_USER_ID, userId)
                 .putString(KEY_AUTH_USERNAME, username)
                 .putString(KEY_AUTH_EMAIL, email)
-                .apply();
+                .putString(KEY_AUTH_DEVICE_ID, normalizeDeviceId(deviceId));
+
+        if (refreshToken != null && !refreshToken.trim().isEmpty()) {
+            editor.putString(KEY_AUTH_REFRESH_TOKEN, refreshToken);
+        }
+        if (refreshExpiresAt > 0) {
+            editor.putLong(KEY_AUTH_REFRESH_EXPIRES_AT, refreshExpiresAt);
+        }
+        if (sessionId != null && !sessionId.trim().isEmpty()) {
+            editor.putString(KEY_AUTH_SESSION_ID, sessionId);
+        }
+
+        editor.apply();
         Log.d(TAG, "saveAuth -> " + username);
     }
 
     public String getAuthToken() {
         return preferences.getString(KEY_AUTH_TOKEN, null);
+    }
+
+    public String getRefreshToken() {
+        return preferences.getString(KEY_AUTH_REFRESH_TOKEN, null);
+    }
+
+    public long getRefreshExpiresAt() {
+        return preferences.getLong(KEY_AUTH_REFRESH_EXPIRES_AT, 0L);
+    }
+
+    public String getDeviceId() {
+        return normalizeDeviceId(preferences.getString(KEY_AUTH_DEVICE_ID, null));
+    }
+
+    public String getSessionId() {
+        return preferences.getString(KEY_AUTH_SESSION_ID, null);
     }
 
     public String getAuthUserId() {
@@ -130,6 +175,11 @@ public class PreferenceHelper {
         return token != null && !token.trim().isEmpty();
     }
 
+    public boolean hasRefreshToken() {
+        String refreshToken = getRefreshToken();
+        return refreshToken != null && !refreshToken.trim().isEmpty();
+    }
+
     public boolean isTaskEmptyTrashPending() {
         return preferences.getBoolean(KEY_TASK_EMPTY_TRASH_PENDING, false);
     }
@@ -145,6 +195,9 @@ public class PreferenceHelper {
                 .remove(KEY_AUTH_USER_ID)
                 .remove(KEY_AUTH_USERNAME)
                 .remove(KEY_AUTH_EMAIL)
+                .remove(KEY_AUTH_REFRESH_TOKEN)
+                .remove(KEY_AUTH_REFRESH_EXPIRES_AT)
+                .remove(KEY_AUTH_SESSION_ID)
                 .apply();
         Log.d(TAG, "clearAuth");
     }
@@ -158,5 +211,22 @@ public class PreferenceHelper {
                 .remove(KEY_SIDEBAR_SYSTEM_FILTER_ORDER)
                 .apply();
         Log.d(TAG, "resetToDefault -> theme=system, notifications=true, sort_by=deadline");
+    }
+
+    private String normalizeDeviceId(String candidate) {
+        if (candidate != null && !candidate.trim().isEmpty()) {
+            String normalized = candidate.trim();
+            preferences.edit().putString(KEY_AUTH_DEVICE_ID, normalized).apply();
+            return normalized;
+        }
+
+        String stored = preferences.getString(KEY_AUTH_DEVICE_ID, null);
+        if (stored != null && !stored.trim().isEmpty()) {
+            return stored.trim();
+        }
+
+        String generated = UUID.randomUUID().toString();
+        preferences.edit().putString(KEY_AUTH_DEVICE_ID, generated).apply();
+        return generated;
     }
 }

@@ -67,13 +67,15 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         setLoading(true);
-        RetrofitClient.getAuthApi().register(new RegisterRequest(username, email, password)).enqueue(new Callback<AuthResponse>() {
+        RetrofitClient.getAuthApi().register(new RegisterRequest(username, email, password,
+                preferenceHelper.getDeviceId())).enqueue(new Callback<AuthResponse>() {
             @Override
             public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
                 setLoading(false);
                 AuthResponse body = response.body();
                 if (response.isSuccessful() && body != null && body.getToken() != null) {
-                    preferenceHelper.saveAuth(body.getToken(), body.getId(), body.getUsername(), body.getEmail());
+                    preferenceHelper.saveAuth(body.getToken(), body.getId(), body.getUsername(), body.getEmail(),
+                            body.getRefreshToken(), body.getRefreshExpiresAt(), body.getDeviceId(), body.getSessionId());
                     openMain();
                 } else {
                     Toast.makeText(RegisterActivity.this, "Register failed", Toast.LENGTH_SHORT).show();
