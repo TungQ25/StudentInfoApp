@@ -3,9 +3,12 @@ package com.example.taskmanager.controller;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.taskmanager.dto.HabitCompletionRequest;
+import com.example.taskmanager.dto.HabitCompletionResponse;
 import com.example.taskmanager.entity.HabitCompletion;
 import com.example.taskmanager.repository.HabitCompletionRepository;
 import com.example.taskmanager.repository.HabitRepository;
+import com.example.taskmanager.service.SyncMetadata;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -34,13 +38,19 @@ public class HabitCompletionController {
     }
 
     @GetMapping
-    public List<HabitCompletion> getCompletions(@AuthenticationPrincipal String userId) {
-        return completionRepository.findActiveAccessibleCompletions(currentUserId(userId));
+    public List<HabitCompletionResponse> getCompletions(@AuthenticationPrincipal String userId) {
+        return completionRepository.findActiveAccessibleCompletions(currentUserId(userId))
+                .stream()
+                .map(HabitCompletionResponse::from)
+                .toList();
     }
 
     @PostMapping
-    public ResponseEntity<HabitCompletion> createCompletion(@Valid @RequestBody HabitCompletion completion, @AuthenticationPrincipal String userId) {
+    public ResponseEntity<HabitCompletionResponse> createCompletion(
+            @Valid @RequestBody HabitCompletionRequest request,
+            @AuthenticationPrincipal String userId) {
         String currentUserId = currentUserId(userId);
+        HabitCompletion completion = request.toEntity();
         if (completion.getId() == null || completion.getId().isBlank()) {
             completion.setId(UUID.randomUUID().toString());
         }
@@ -49,13 +59,16 @@ public class HabitCompletionController {
             if (!existingCompletion.isDeleted()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Habit completion id already exists");
             }
+            SyncMetadata.requireFreshVersion(request.version(), existingCompletion.getVersion());
             validateHabit(completion.getHabitId(), currentUserId);
-            existingCompletion.setHabitId(completion.getHabitId());
-            existingCompletion.setPeriodKey(completion.getPeriodKey());
-            existingCompletion.setCompletedAt(completion.getCompletedAt());
+            request.applyTo(existingCompletion);
             existingCompletion.setDeleted(false);
+            existingCompletion.setDeletedAt(null);
+            existingCompletion.setVersion(SyncMetadata.nextVersion(existingCompletion.getVersion()));
+            existingCompletion.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(request.deviceId()));
             normalizeTimestamps(existingCompletion, completion);
-            return ResponseEntity.status(HttpStatus.CREATED).body(completionRepository.save(existingCompletion));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(HabitCompletionResponse.from(completionRepository.save(existingCompletion)));
         }
         if (completionRepository.existsById(completion.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Habit completion id already exists");
@@ -63,32 +76,48 @@ public class HabitCompletionController {
         validateHabit(completion.getHabitId(), currentUserId);
         completion.setUserId(currentUserId);
         completion.setDeleted(false);
+        completion.setDeletedAt(null);
+        completion.setVersion(SyncMetadata.initialVersion(request.version()));
+        completion.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(request.deviceId()));
         normalizeTimestamps(completion, completion);
-        return ResponseEntity.status(HttpStatus.CREATED).body(completionRepository.save(completion));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(HabitCompletionResponse.from(completionRepository.save(completion)));
     }
 
     @PutMapping("/{id}")
-    public HabitCompletion updateCompletion(@PathVariable String id, @Valid @RequestBody HabitCompletion completion, @AuthenticationPrincipal String userId) {
+    public HabitCompletionResponse updateCompletion(
+            @PathVariable String id,
+            @Valid @RequestBody HabitCompletionRequest request,
+            @AuthenticationPrincipal String userId) {
         String currentUserId = currentUserId(userId);
         HabitCompletion existing = completionRepository.findAccessibleById(id, currentUserId)
                 .filter(c -> !c.isDeleted())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Habit completion not found"));
 
-        validateHabit(completion.getHabitId(), currentUserId);
-        existing.setHabitId(completion.getHabitId());
-        existing.setPeriodKey(completion.getPeriodKey());
-        existing.setCompletedAt(completion.getCompletedAt());
-        normalizeTimestamps(existing, completion);
-        return completionRepository.save(existing);
+        SyncMetadata.requireFreshVersion(request.version(), existing.getVersion());
+        HabitCompletion requestCompletion = request.toEntity();
+        validateHabit(requestCompletion.getHabitId(), currentUserId);
+        request.applyTo(existing);
+        normalizeTimestamps(existing, requestCompletion);
+        existing.setVersion(SyncMetadata.nextVersion(existing.getVersion()));
+        existing.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(request.deviceId()));
+        return HabitCompletionResponse.from(completionRepository.save(existing));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<HabitCompletion> deleteCompletion(@PathVariable String id, @AuthenticationPrincipal String userId) {
+    public ResponseEntity<HabitCompletionResponse> deleteCompletion(
+            @PathVariable String id,
+            @RequestParam(required = false) String deviceId,
+            @AuthenticationPrincipal String userId) {
         HabitCompletion completion = completionRepository.findAccessibleById(id, currentUserId(userId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Habit completion not found"));
+        long now = System.currentTimeMillis();
         completion.setDeleted(true);
-        completion.setUpdatedAt(System.currentTimeMillis());
-        return ResponseEntity.ok(completionRepository.save(completion));
+        completion.setDeletedAt(now);
+        completion.setUpdatedAt(now);
+        completion.setVersion(SyncMetadata.nextVersion(completion.getVersion()));
+        completion.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(deviceId));
+        return ResponseEntity.ok(HabitCompletionResponse.from(completionRepository.save(completion)));
     }
 
     private void validateHabit(String habitId, String userId) {
