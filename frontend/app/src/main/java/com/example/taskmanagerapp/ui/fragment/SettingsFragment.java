@@ -26,10 +26,16 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.example.taskmanagerapp.R;
+import com.example.taskmanagerapp.data.remote.RetrofitClient;
+import com.example.taskmanagerapp.data.remote.dto.LogoutRequest;
 import com.example.taskmanagerapp.ui.activity.GeneralSettingsActivity;
 import com.example.taskmanagerapp.ui.activity.LoginActivity;
 import com.example.taskmanagerapp.ui.activity.MainActivity;
 import com.example.taskmanagerapp.utils.PreferenceHelper;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class SettingsFragment extends Fragment {
     private static final String[] THEME_LABELS = {"Light", "Dark", "System"};
@@ -363,6 +369,26 @@ public class SettingsFragment extends Fragment {
     }
 
     private void logout() {
+        String refreshToken = preferenceHelper.getRefreshToken();
+        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            finishLogout();
+            return;
+        }
+
+        RetrofitClient.getAuthApi().logout(new LogoutRequest(refreshToken)).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                finishLogout();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                finishLogout();
+            }
+        });
+    }
+
+    private void finishLogout() {
         preferenceHelper.clearAuth();
         Intent intent = new Intent(requireContext(), LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

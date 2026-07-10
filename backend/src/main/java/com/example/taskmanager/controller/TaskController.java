@@ -3,9 +3,12 @@ package com.example.taskmanager.controller;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.taskmanager.dto.TaskRequest;
+import com.example.taskmanager.dto.TaskResponse;
 import com.example.taskmanager.entity.Task;
 import com.example.taskmanager.repository.CategoryRepository;
 import com.example.taskmanager.repository.TaskRepository;
+import com.example.taskmanager.service.SyncMetadata;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,81 +40,100 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<Task> getAllTasks(@AuthenticationPrincipal String userId) {
-        return repository.findActiveAccessibleTasks(currentUserId(userId));
+    public List<TaskResponse> getAllTasks(@AuthenticationPrincipal String userId) {
+        return repository.findActiveAccessibleTasks(currentUserId(userId))
+                .stream()
+                .map(TaskResponse::from)
+                .toList();
     }
 
     @GetMapping("/trash")
-    public List<Task> getTrash(@AuthenticationPrincipal String userId) {
-        return repository.findAccessibleTrashTasks(currentUserId(userId));
+    public List<TaskResponse> getTrash(@AuthenticationPrincipal String userId) {
+        return repository.findAccessibleTrashTasks(currentUserId(userId))
+                .stream()
+                .map(TaskResponse::from)
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public Task getTaskById(@PathVariable String id, @AuthenticationPrincipal String userId) {
+    public TaskResponse getTaskById(@PathVariable String id, @AuthenticationPrincipal String userId) {
         return repository.findAccessibleById(id, currentUserId(userId))
                 .filter(task -> !task.isDeleted())
+                .map(TaskResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
     @PostMapping
-    public ResponseEntity<Task> createTask(@Valid @RequestBody Task task, @AuthenticationPrincipal String userId) {
+    public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody TaskRequest request, @AuthenticationPrincipal String userId) {
         String currentUserId = currentUserId(userId);
+        Task task = request.toEntity();
         if (task.getId() == null || task.getId().isBlank()) {
             task.setId(UUID.randomUUID().toString());
         }
         if (repository.existsById(task.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Task id already exists");
         }
+        normalizeOptionalFields(task);
         validateCategory(task.getCategoryId(), currentUserId);
         task.setDeleted(false);
         task.setDeletedAt(null);
         task.setUserId(currentUserId);
+        task.setVersion(SyncMetadata.initialVersion(request.version()));
+        task.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(request.deviceId()));
         normalizeUpdatedAt(task, task);
-        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(task));
+        return ResponseEntity.status(HttpStatus.CREATED).body(TaskResponse.from(repository.save(task)));
     }
 
     @PutMapping("/{id}")
-    public Task updateTask(@PathVariable String id, @Valid @RequestBody Task task, @AuthenticationPrincipal String userId) {
+    public TaskResponse updateTask(@PathVariable String id, @Valid @RequestBody TaskRequest request, @AuthenticationPrincipal String userId) {
         String currentUserId = currentUserId(userId);
         Task existingTask = repository.findAccessibleById(id, currentUserId)
                 .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        validateCategory(task.getCategoryId(), currentUserId);
-        existingTask.setTitle(task.getTitle());
-        existingTask.setDescription(task.getDescription());
-        normalizeOptionalFields(task);
-        existingTask.setCategoryId(task.getCategoryId());
-        existingTask.setDeadline(task.getDeadline());
-        existingTask.setCompleted(task.isCompleted());
-        existingTask.setWontDo(task.isWontDo());
-        existingTask.setPriority(task.getPriority());
-        existingTask.setImagePath(task.getImagePath());
-        normalizeUpdatedAt(existingTask, task);
+        SyncMetadata.requireFreshVersion(request.version(), existingTask.getVersion());
+        Task requestTask = request.toEntity();
+        normalizeOptionalFields(requestTask);
+        validateCategory(requestTask.getCategoryId(), currentUserId);
+        request.applyTo(existingTask);
+        normalizeOptionalFields(existingTask);
+        normalizeUpdatedAt(existingTask, requestTask);
+        existingTask.setVersion(SyncMetadata.nextVersion(existingTask.getVersion()));
+        existingTask.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(request.deviceId()));
 
-        return repository.save(existingTask);
+        return TaskResponse.from(repository.save(existingTask));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Task> softDeleteTask(@PathVariable String id, @AuthenticationPrincipal String userId) {
+    public ResponseEntity<TaskResponse> softDeleteTask(
+            @PathVariable String id,
+            @RequestParam(required = false) String deviceId,
+            @AuthenticationPrincipal String userId) {
         return repository.findAccessibleById(id, currentUserId(userId))
                 .map(task -> {
                     task.setDeleted(true);
                     task.setDeletedAt(System.currentTimeMillis());
                     task.setUpdatedAt(System.currentTimeMillis());
-                    return ResponseEntity.ok(repository.save(task));
+                    task.setVersion(SyncMetadata.nextVersion(task.getVersion()));
+                    task.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(deviceId));
+                    return ResponseEntity.ok(TaskResponse.from(repository.save(task)));
                 })
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
     @PostMapping("/{id}/restore")
-    public ResponseEntity<Task> restoreTask(@PathVariable String id, @AuthenticationPrincipal String userId) {
+    public ResponseEntity<TaskResponse> restoreTask(
+            @PathVariable String id,
+            @RequestParam(required = false) String deviceId,
+            @AuthenticationPrincipal String userId) {
         return repository.findAccessibleById(id, currentUserId(userId))
                 .map(task -> {
                     task.setDeleted(false);
                     task.setDeletedAt(null);
                     task.setUpdatedAt(System.currentTimeMillis());
-                    return ResponseEntity.ok(repository.save(task));
+                    task.setVersion(SyncMetadata.nextVersion(task.getVersion()));
+                    task.setLastModifiedDeviceId(SyncMetadata.normalizeDeviceId(deviceId));
+                    return ResponseEntity.ok(TaskResponse.from(repository.save(task)));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

@@ -24,6 +24,6 @@ public interface TaskRepository extends JpaRepository<Task, String> {
     int deleteAccessibleTrash(@Param("userId") String userId);
 
     @Modifying
-    @Query("update Task t set t.deleted = true, t.deletedAt = :deletedAt, t.updatedAt = :updatedAt where t.categoryId = :categoryId and t.userId = :userId and t.deleted = false")
+    @Query("update Task t set t.deleted = true, t.deletedAt = :deletedAt, t.updatedAt = :updatedAt, t.version = t.version + 1 where t.categoryId = :categoryId and t.userId = :userId and t.deleted = false")
     int markCategoryTasksDeleted(@Param("categoryId") String categoryId, @Param("userId") String userId, @Param("updatedAt") long updatedAt, @Param("deletedAt") long deletedAt);
 }

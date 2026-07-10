@@ -5,82 +5,89 @@ Spring Boot REST API for the Android Task Manager app.
 ## Requirements
 
 - Java 17 or newer
-- MySQL running on `localhost:3306`
-- Database user configured in `src/main/resources/application.properties`
+- PostgreSQL
+- Database credentials provided through environment variables
 
-Default config:
+Create the database before running the backend:
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/tasks_manager_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-spring.datasource.username=root
-spring.datasource.password=
+```sql
+CREATE DATABASE tasks_manager_db;
 ```
 
-Update `spring.datasource.password` if your MySQL root account has a password.
+Local environment example:
+
+```powershell
+$env:SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/tasks_manager_db'
+$env:SPRING_DATASOURCE_USERNAME='<db-user>'
+$env:SPRING_DATASOURCE_PASSWORD='<db-password>'
+$env:JWT_SECRET='<long-random-secret>'
+$env:APP_CORS_ALLOWED_ORIGIN_PATTERNS='http://localhost:3000,http://localhost:8080'
+```
 
 ## Run
 
-From the repo root:
+From the backend directory:
 
 ```powershell
+cd backend
 $env:JAVA_HOME='D:\Android\Android Studio\jbr'
 $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
-.\gradlew.bat :backend:bootRun
+.\gradlew.bat bootRun
 ```
 
 The API runs at:
 
 ```text
-http://localhost:8080/api/tasks
+http://localhost:8080
 ```
 
-Android Emulator should call it through:
+## Verify
+
+```powershell
+.\gradlew.bat test
+.\gradlew.bat bootJar
+```
+
+## API Contract
+
+The current REST contract is documented in:
 
 ```text
-http://192.168.1.3:8080/api/tasks
+backend/openapi.yaml
 ```
 
-## Endpoints
+Main endpoint groups:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
-- `GET /api/tasks` requires `Authorization: Bearer <token>`
-- `GET /api/tasks/{id}` requires `Authorization: Bearer <token>`
-- `POST /api/tasks` requires `Authorization: Bearer <token>`
-- `PUT /api/tasks/{id}` requires `Authorization: Bearer <token>`
-- `DELETE /api/tasks/{id}` requires `Authorization: Bearer <token>`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `POST /api/auth/logout-all`
+- `/api/tasks`
+- `/api/categories`
+- `/api/habits`
+- `/api/habit-completions`
 
-## Auth payloads
+Authenticated endpoints require:
 
-Register:
-
-```json
-{
-  "username": "demo",
-  "email": "demo@example.com",
-  "password": "123456"
-}
+```text
+Authorization: Bearer <access-token>
 ```
 
-Login accepts username or email in `identifier`:
+## Schema
 
-```json
-{
-  "identifier": "demo",
-  "password": "123456"
-}
+During development, Hibernate manages schema changes automatically:
+
+```properties
+spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
 ```
 
-Auth responses include the user profile and JWT:
+If the dev database drifts, recreate the PostgreSQL database or point the backend at a fresh one.
 
-```json
-{
-  "id": "...",
-  "username": "demo",
-  "email": "demo@example.com",
-  "createdAt": 123456789,
-  "token": "...",
-  "tokenType": "Bearer",
-  "expiresAt": 123456789
-}
+## Production
+
+See:
+
+```text
+backend/DEPLOYMENT.md
 ```

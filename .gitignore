@@ -10,3 +10,4 @@
 **/.externalNativeBuild/
 **/.cxx/
 **/keystores/*.jks
+.tools/

@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,9 +23,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final String allowedOriginPatterns;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Value("${app.cors.allowed-origin-patterns:*}") String allowedOriginPatterns) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.allowedOriginPatterns = allowedOriginPatterns;
     }
 
     @Bean
@@ -34,19 +39,16 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response,
-                                                   authException) ->
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Authentication token is missing or invalid"))
-
-                        .accessDeniedHandler((request, response,
-                                                   accessDeniedException) ->
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN,"Access denied"))
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication token is missing or invalid"))
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied"))
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // Cho phép tất cả các request đến /error mà không cần xác thực
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/error").permitAll() // Bỏ qua xác thực cho endpoint /error để đảm bảo lỗi 401/403 được trả về đúng cách
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -56,7 +58,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*")); // TODO: cho phép fe từ mọi domain gọi be, deploy thì nên giới hạn lại
+        configuration.setAllowedOriginPatterns(parseAllowedOriginPatterns());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
@@ -65,5 +67,14 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    private List<String> parseAllowedOriginPatterns() {
+        List<String> patterns = List.of(allowedOriginPatterns.split(","))
+                .stream()
+                .map(String::trim)
+                .filter(pattern -> !pattern.isBlank())
+                .toList();
+        return patterns.isEmpty() ? List.of("*") : patterns;
     }
 }

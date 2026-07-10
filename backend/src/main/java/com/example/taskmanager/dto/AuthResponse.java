@@ -7,6 +7,10 @@ public record AuthResponse(
         long createdAt,
         String token,
         String tokenType,
-        long expiresAt
+        long expiresAt,
+        String refreshToken,
+        long refreshExpiresAt,
+        String deviceId,
+        String sessionId
 ) {
 }
