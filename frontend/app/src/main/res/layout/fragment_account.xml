@@ -47,11 +47,12 @@
             <LinearLayout
                 android:id="@+id/accountTopBar"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="64dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp">
+                android:paddingTop="20dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp">
 
                 <ImageButton
                     android:id="@+id/btnAccountBack"

@@ -30,6 +30,7 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onSidebarItemClick(SidebarItem item);
         void onSidebarItemLongClick(SidebarItem item, View anchor);
         void onSidebarOverflowClick(SidebarItem item, View anchor);
+        void onSidebarAvatarClick();
         void onSidebarSettingsClick();
         void onSidebarNotificationClick();
     }
@@ -157,6 +158,7 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             title.setText(item.getTitle());
             String name = item.getTitle() == null || item.getTitle().isEmpty() ? "U" : item.getTitle().substring(0, 1).toUpperCase();
             avatar.setText(name);
+            avatar.setOnClickListener(v -> listener.onSidebarAvatarClick());
             notify.setOnClickListener(v -> listener.onSidebarNotificationClick());
             settings.setOnClickListener(v -> listener.onSidebarSettingsClick());
         }
@@ -191,6 +193,11 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         void bind(SidebarItem item) {
             itemView.setBackgroundResource(item.isSelected() ? R.drawable.bg_sidebar_selected : 0);
+            boolean usesPlainIcon = item.getType() == SidebarItem.Type.CATEGORY
+                    || item.getType() == SidebarItem.Type.PINNED_CATEGORY
+                    || item.getType() == SidebarItem.Type.SMART_FILTER
+                    || item.getType() == SidebarItem.Type.SYSTEM_FILTER;
+            icon.setBackgroundResource(usesPlainIcon ? 0 : R.drawable.bg_sidebar_icon);
             icon.setText(item.getIcon() == null || item.getIcon().isEmpty() ? "#" : item.getIcon());
             title.setText(item.getTitle());
             if (item.isShowCount()) {

@@ -574,7 +574,6 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     }
 
     private void openAccountFromSidebar() {
-        showSidebar(false);
         if (requireActivity() instanceof MainActivity) {
             ((MainActivity) requireActivity()).showFullScreenFragment(new AccountFragment());
         }
