@@ -32,7 +32,6 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onSidebarOverflowClick(SidebarItem item, View anchor);
         void onSidebarAvatarClick();
         void onSidebarSettingsClick();
-        void onSidebarNotificationClick();
     }
 
     public SidebarAdapter(OnSidebarActionListener listener) {
@@ -143,14 +142,12 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     class HeaderViewHolder extends RecyclerView.ViewHolder {
         TextView title;
         TextView avatar;
-        TextView notify;
         TextView settings;
 
         HeaderViewHolder(@NonNull View itemView) {
             super(itemView);
             title = itemView.findViewById(R.id.tvHeaderTitle);
             avatar = itemView.findViewById(R.id.tvHeaderAvatar);
-            notify = itemView.findViewById(R.id.btnHeaderNotify);
             settings = itemView.findViewById(R.id.btnHeaderSettings);
         }
 
@@ -159,7 +156,6 @@ public class SidebarAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             String name = item.getTitle() == null || item.getTitle().isEmpty() ? "U" : item.getTitle().substring(0, 1).toUpperCase();
             avatar.setText(name);
             avatar.setOnClickListener(v -> listener.onSidebarAvatarClick());
-            notify.setOnClickListener(v -> listener.onSidebarNotificationClick());
             settings.setOnClickListener(v -> listener.onSidebarSettingsClick());
         }
     }

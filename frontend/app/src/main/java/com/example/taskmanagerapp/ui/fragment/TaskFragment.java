@@ -236,7 +236,6 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
                 showCategoryMenu(item, anchor);
             }
 
-            // TODO: Thiết lập lại setting và notification
             @Override
             public void onSidebarAvatarClick() {
                 openAccountFromSidebar();
@@ -245,10 +244,6 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
             @Override
             public void onSidebarSettingsClick() {
                 openSettingsFromSidebar();
-            }
-            @Override
-            public void onSidebarNotificationClick() {
-                Toast.makeText(requireContext(), "Notifications are not implemented yet", Toast.LENGTH_SHORT).show();
             }
         });
         rvSidebar.setLayoutManager(new LinearLayoutManager(requireContext()));

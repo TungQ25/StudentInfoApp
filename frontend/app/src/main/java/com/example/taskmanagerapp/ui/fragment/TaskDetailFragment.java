@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,8 +17,14 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.CheckBox;
+import android.widget.DatePicker;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -38,8 +45,12 @@ import com.example.taskmanagerapp.utils.ImageStorageHelper;
 import com.example.taskmanagerapp.viewmodel.CategoryViewModel;
 import com.example.taskmanagerapp.viewmodel.TaskViewModel;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class TaskDetailFragment extends Fragment {
 
@@ -221,7 +232,7 @@ public class TaskDetailFragment extends Fragment {
         bindPriorityTarget(tvPriority);
         bindMenuTarget(root.findViewById(R.id.btnDetailMore));
         bindDragTarget(completionRow);
-        bindDragTarget(tvDeadline);
+        bindDeadlineTarget(tvDeadline);
         bindCompleteCheck(checkComplete);
         bindFocusedEditTarget(tvTitle, AddTaskActivity.FOCUS_TITLE);
         bindFocusedEditTarget(tvDescription, AddTaskActivity.FOCUS_DESCRIPTION);
@@ -234,6 +245,15 @@ public class TaskDetailFragment extends Fragment {
         if (target == null) {
             return;
         }
+        target.setOnTouchListener(this::handleDetailTouch);
+        target.setClickable(true);
+    }
+
+    private void bindDeadlineTarget(TextView target) {
+        if (target == null) {
+            return;
+        }
+        target.setOnClickListener(v -> showDeadlinePicker(target));
         target.setOnTouchListener(this::handleDetailTouch);
         target.setClickable(true);
     }
@@ -637,6 +657,187 @@ public class TaskDetailFragment extends Fragment {
             return true;
         });
         menu.show();
+    }
+
+    private void showDeadlinePicker(TextView tvDeadline) {
+        if (task == null || task.isDeleted() || closing || editLaunching) {
+            return;
+        }
+
+        Calendar initial = parseDeadlineDate(task.getDeadline());
+        if (initial == null) {
+            initial = Calendar.getInstance();
+        }
+        String initialTime = parseDeadlineTime(task.getDeadline());
+        if (!isBlank(initialTime)) {
+            applyTimeToCalendar(initial, initialTime);
+        }
+
+        LinearLayout contentLayout = new LinearLayout(requireContext());
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        contentLayout.setPadding(dp(16), dp(8), dp(16), dp(16));
+
+        RadioGroup pickerMode = new RadioGroup(requireContext());
+        pickerMode.setOrientation(RadioGroup.HORIZONTAL);
+
+        RadioButton dateMode = new RadioButton(requireContext());
+        dateMode.setId(View.generateViewId());
+        dateMode.setText(R.string.task_editor_date);
+        pickerMode.addView(dateMode, new RadioGroup.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        RadioButton timeMode = new RadioButton(requireContext());
+        timeMode.setId(View.generateViewId());
+        timeMode.setText(R.string.task_editor_time);
+        pickerMode.addView(timeMode, new RadioGroup.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        contentLayout.addView(pickerMode);
+
+        LinearLayout actionRow = new LinearLayout(requireContext());
+        actionRow.setGravity(Gravity.CENTER_VERTICAL);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionRow.setPadding(0, dp(6), 0, dp(10));
+
+        TextView clearButton = createDeadlineDialogButton(R.string.task_detail_clear_deadline, false);
+        TextView cancelButton = createDeadlineDialogButton(R.string.cancel, false);
+        TextView saveButton = createDeadlineDialogButton(R.string.save_task, true);
+        actionRow.addView(clearButton, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        cancelParams.setMarginStart(dp(8));
+        actionRow.addView(cancelButton, cancelParams);
+        LinearLayout.LayoutParams saveParams = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        saveParams.setMarginStart(dp(8));
+        actionRow.addView(saveButton, saveParams);
+        contentLayout.addView(actionRow);
+
+        DatePicker datePicker = new DatePicker(requireContext());
+        datePicker.init(
+                initial.get(Calendar.YEAR),
+                initial.get(Calendar.MONTH),
+                initial.get(Calendar.DAY_OF_MONTH),
+                null);
+
+        CheckBox includeTime = new CheckBox(requireContext());
+        includeTime.setText(R.string.task_detail_include_time);
+        includeTime.setChecked(!isBlank(initialTime));
+        contentLayout.addView(includeTime);
+
+        TimePicker timePicker = new TimePicker(requireContext());
+        timePicker.setIs24HourView(true);
+        timePicker.setHour(initial.get(Calendar.HOUR_OF_DAY));
+        timePicker.setMinute(initial.get(Calendar.MINUTE));
+
+        FrameLayout pickerFrame = new FrameLayout(requireContext());
+        pickerFrame.addView(datePicker, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        pickerFrame.addView(timePicker, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        contentLayout.addView(pickerFrame);
+
+        pickerMode.setOnCheckedChangeListener((group, checkedId) -> {
+            boolean showingTime = checkedId == timeMode.getId();
+            datePicker.setVisibility(showingTime ? View.GONE : View.VISIBLE);
+            timePicker.setVisibility(showingTime ? View.VISIBLE : View.GONE);
+            if (showingTime) {
+                includeTime.setChecked(true);
+            }
+        });
+        includeTime.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (!isChecked && timePicker.getVisibility() == View.VISIBLE) {
+                pickerMode.check(dateMode.getId());
+            }
+        });
+        pickerMode.check(dateMode.getId());
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.task_detail_edit_deadline)
+                .setView(contentLayout)
+                .create();
+
+        saveButton.setOnClickListener(v -> {
+            String deadline = buildDeadline(datePicker, timePicker, includeTime.isChecked());
+            updateDeadline(tvDeadline, deadline);
+            dialog.dismiss();
+        });
+        clearButton.setOnClickListener(v -> {
+            updateDeadline(tvDeadline, "");
+            dialog.dismiss();
+        });
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private TextView createDeadlineDialogButton(int textRes, boolean primary) {
+        TextView button = new TextView(requireContext());
+        button.setBackgroundResource(primary
+                ? R.drawable.bg_task_editor_primary_button
+                : R.drawable.bg_task_editor_secondary_button);
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setGravity(Gravity.CENTER);
+        button.setText(textRes);
+        button.setTextColor(primary ? Color.WHITE : Color.rgb(215, 221, 229));
+        button.setTextSize(14);
+        return button;
+    }
+
+    private String buildDeadline(DatePicker datePicker, TimePicker timePicker, boolean includeTime) {
+        Calendar picked = Calendar.getInstance();
+        picked.set(datePicker.getYear(), datePicker.getMonth(), datePicker.getDayOfMonth());
+        String date = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(picked.getTime());
+        if (!includeTime) {
+            return date;
+        }
+        return date + " " + String.format(Locale.US, "%02d:%02d", timePicker.getHour(), timePicker.getMinute());
+    }
+
+    private void updateDeadline(TextView tvDeadline, String deadline) {
+        task.setDeadline(deadline);
+        tvDeadline.setText(isBlank(deadline) ? "Date & Reminder" : deadline);
+        if (taskViewModel != null) {
+            taskViewModel.updateTask(task);
+        }
+    }
+
+    private Calendar parseDeadlineDate(String deadline) {
+        if (isBlank(deadline)) {
+            return null;
+        }
+        String trimmed = deadline.trim();
+        if (trimmed.length() < 10) {
+            return null;
+        }
+        try {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(trimmed.substring(0, 10)));
+            return calendar;
+        } catch (ParseException e) {
+            return null;
+        }
+    }
+
+    private String parseDeadlineTime(String deadline) {
+        if (isBlank(deadline)) {
+            return null;
+        }
+        String trimmed = deadline.trim();
+        if (trimmed.length() >= 16 && trimmed.charAt(10) == ' ') {
+            return trimmed.substring(11, 16);
+        }
+        return null;
+    }
+
+    private void applyTimeToCalendar(Calendar calendar, String time) {
+        String[] parts = time.split(":");
+        if (parts.length < 2) {
+            return;
+        }
+        try {
+            calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(parts[0]));
+            calendar.set(Calendar.MINUTE, Integer.parseInt(parts[1]));
+        } catch (NumberFormatException ignored) {
+            // Keep the current time when the saved value is malformed.
+        }
     }
 
     private void showPlaceholderToast() {
