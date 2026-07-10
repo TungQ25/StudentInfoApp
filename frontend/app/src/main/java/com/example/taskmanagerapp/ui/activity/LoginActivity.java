@@ -87,7 +87,7 @@ public class LoginActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         btnLogin.setEnabled(!loading);
         txtRegister.setEnabled(!loading);
-        btnLogin.setText(loading ? "Signing in..." : "Login");
+        btnLogin.setText(loading ? "Signing in..." : getString(R.string.auth_login));
     }
 
     private void openMain() {

@@ -58,10 +58,10 @@
     <string name="auth_email">Email</string>
     <string name="auth_password">Password</string>
     <string name="auth_confirm_password">Confirm password</string>
-    <string name="auth_identifier_hint">you@example.com or username</string>
+    <string name="auth_identifier_hint">username</string>
     <string name="auth_username_hint">Your username</string>
     <string name="auth_email_hint">you@example.com</string>
-    <string name="auth_password_hint">At least 6 characters</string>
+    <string name="auth_password_hint">••••••</string>
     <string name="auth_login">Sign in</string>
     <string name="auth_register">Create account</string>
     <string name="auth_no_account">No account yet?</string>
