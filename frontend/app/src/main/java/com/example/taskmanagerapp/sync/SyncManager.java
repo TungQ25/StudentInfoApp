@@ -246,6 +246,16 @@ public class SyncManager {
             Log.d(TAG, "POST /api/tasks -> " + createResponse.code());
             return createResponse;
         }
+        if (response.code() == 404 && task.isRemoteExists()) {
+            Response<Task> restoreResponse = todoApi.restoreTask(task.getId()).execute();
+            Log.d(TAG, "POST /api/tasks/" + task.getId() + "/restore -> " + restoreResponse.code());
+            if (restoreResponse.isSuccessful()) {
+                Response<Task> retryResponse = todoApi.updateTask(task.getId(), task).execute();
+                Log.d(TAG, "PUT /api/tasks/" + task.getId() + " after restore -> " + retryResponse.code());
+                return retryResponse;
+            }
+            return restoreResponse;
+        }
         return response;
     }
 

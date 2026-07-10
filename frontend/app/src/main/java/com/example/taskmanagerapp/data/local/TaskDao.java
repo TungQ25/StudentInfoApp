@@ -66,6 +66,9 @@ public interface TaskDao {
     @Query("UPDATE tasks SET deleted = 1, synced = 0, permanent_delete_pending = 0, updated_at = :updatedAt WHERE id = :taskId AND user_id = :userId")
     int markDeletedForSync(String taskId, String userId, long updatedAt);
 
+    @Query("UPDATE tasks SET deleted = 0, synced = 0, permanent_delete_pending = 0, updated_at = :updatedAt WHERE id = :taskId AND user_id = :userId AND deleted = 1 AND permanent_delete_pending = 0")
+    int markRestoredForSync(String taskId, String userId, long updatedAt);
+
     @Query("UPDATE tasks SET deleted = 1, synced = 0, updated_at = :updatedAt WHERE category_id = :categoryId AND user_id = :userId AND deleted = 0")
     int markCategoryTasksDeleted(String categoryId, String userId, long updatedAt);
 

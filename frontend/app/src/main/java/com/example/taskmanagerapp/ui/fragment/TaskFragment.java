@@ -297,7 +297,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
     private void setupActions() {
         btnAddTask.setOnClickListener(v -> openAddTask());
-        btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
+        btnDeleteSelected.setOnClickListener(v -> handleSelectedTasksAction());
         ViewConfiguration configuration = ViewConfiguration.get(requireContext());
         sidebarTouchSlop = configuration.getScaledTouchSlop();
         sidebarMinFlingVelocity = configuration.getScaledMinimumFlingVelocity();
@@ -1511,6 +1511,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         for (Task task : visibleTasks) {
             if (task.isSelected()) {
                 allowEmptyMultiSelectMode = false;
+                btnDeleteSelected.setText(isTrashFilterSelected() ? "Restore Selected" : "Delete Selected");
                 btnDeleteSelected.setVisibility(View.VISIBLE);
                 return;
             }
@@ -1519,6 +1520,31 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
             multiSelectMode = false;
         }
         btnDeleteSelected.setVisibility(View.GONE);
+    }
+
+    private void handleSelectedTasksAction() {
+        if (isTrashFilterSelected()) {
+            restoreSelectedTasks();
+        } else {
+            deleteSelectedTasks();
+        }
+    }
+
+    private void restoreSelectedTasks() {
+        List<Task> currentList = taskAdapter.getCurrentList();
+        int restoredCount = 0;
+        for (Task task : currentList) {
+            if (task.isSelected()) {
+                taskViewModel.restoreTask(task.getId());
+                restoredCount++;
+            }
+        }
+        if (restoredCount == 0) {
+            Toast.makeText(requireContext(), "No tasks selected", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(requireContext(), restoredCount + " task(s) restored", Toast.LENGTH_SHORT).show();
+        }
+        clearTaskSelection();
     }
 
     private void deleteSelectedTasks() {
@@ -1538,9 +1564,9 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
     private void deleteTaskAndImage(Task task) {
         if (task == null) return;
-        String img = task.getImagePath();
-        if (img != null && !img.isEmpty()) imageStorage.deleteImage(img);
         if (shouldPermanentlyDelete(task)) {
+            String img = task.getImagePath();
+            if (img != null && !img.isEmpty()) imageStorage.deleteImage(img);
             taskViewModel.permanentlyDeleteTask(task.getId());
         } else {
             taskViewModel.deleteTask(task.getId());

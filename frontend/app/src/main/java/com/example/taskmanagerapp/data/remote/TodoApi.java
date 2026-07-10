@@ -34,6 +34,9 @@ public interface TodoApi {
     @DELETE("api/tasks/{id}")
     Call<Task> deleteTask(@Path("id") String id);
 
+    @POST("api/tasks/{id}/restore")
+    Call<Task> restoreTask(@Path("id") String id);
+
     @DELETE("api/tasks/{id}/permanent")
     Call<Void> permanentlyDeleteTask(@Path("id") String id);
 
