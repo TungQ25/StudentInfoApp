@@ -4,10 +4,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -17,8 +19,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.taskmanagerapp.R;
+import com.example.taskmanagerapp.sync.SyncManager;
 import com.example.taskmanagerapp.ui.fragment.HabitFragment;
 import com.example.taskmanagerapp.ui.fragment.MatrixFragment;
 import com.example.taskmanagerapp.ui.fragment.PomodoroFragment;
@@ -26,6 +30,9 @@ import com.example.taskmanagerapp.ui.fragment.SettingsFragment;
 import com.example.taskmanagerapp.ui.fragment.TaskFragment;
 import com.example.taskmanagerapp.utils.PreferenceHelper;
 import com.google.android.material.appbar.MaterialToolbar;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -40,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         void onHabitFilterRequested(View anchor);
     }
 
+    private static final String TAG = "MainActivity";
     private static final String STATE_SELECTED_BOTTOM_NAV_ITEM = "selectedBottomNavItem";
 
     private View appBarLayout;
@@ -48,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView toolbarTitleIcon;
     private ImageButton toolbarLeftButton;
     private ImageButton toolbarRightButton;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private View bottomNavigation;
     private View sidebarPanel;
     private View sidebarScrim;
@@ -55,8 +64,11 @@ public class MainActivity extends AppCompatActivity {
     private TaskToolbarController taskToolbarController;
     private HabitToolbarController habitToolbarController;
     private PreferenceHelper preferenceHelper;
+    private SyncManager syncManager;
+    private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor();
     private String appliedTheme;
     private int selectedBottomNavItem = R.id.nav_task;
+    private boolean isManualRefreshRunning;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,12 +100,14 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        setupPullToRefresh();
         setupBottomNavigation();
         if (getSupportFragmentManager().findFragmentById(R.id.main_fragment_container) == null) {
             showSelectedFragment(selectedBottomNavItem);
         } else {
             applyBottomNavigationState(selectedBottomNavItem);
         }
+        updatePullToRefreshEnabled();
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateFullScreenFragmentContainer);
         updateFullScreenFragmentContainer();
     }
@@ -105,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
         toolbarTitleIcon = findViewById(R.id.ivToolbarTitleIcon);
         toolbarLeftButton = findViewById(R.id.btnToggleSidebar);
         toolbarRightButton = findViewById(R.id.btnToolbarMore);
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         if (toolbarLeftButton != null) {
             toolbarLeftButton.setOnClickListener(v -> {
                 if (taskToolbarController != null) {
@@ -128,7 +143,108 @@ public class MainActivity extends AppCompatActivity {
         sidebarScrim = findViewById(R.id.sidebarScrim);
         fullScreenFragmentContainer = findViewById(R.id.fullScreenFragmentContainer);
         preferenceHelper = new PreferenceHelper(this);
+        syncManager = new SyncManager(this);
         appliedTheme = preferenceHelper.getTheme();
+    }
+
+    private void setupPullToRefresh() {
+        if (swipeRefreshLayout == null) {
+            return;
+        }
+        swipeRefreshLayout.setColorSchemeResources(R.color.colorAddAction);
+        swipeRefreshLayout.setProgressBackgroundColorSchemeResource(R.color.colorSurface);
+        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) ->
+                !isPullToRefreshAllowed() || isCurrentFragmentScrolledUp());
+        swipeRefreshLayout.setOnRefreshListener(this::performManualRefresh);
+    }
+
+    private void performManualRefresh() {
+        if (!isPullToRefreshAllowed()) {
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.setRefreshing(false);
+            }
+            return;
+        }
+        if (isManualRefreshRunning) {
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.setRefreshing(true);
+            }
+            return;
+        }
+
+        isManualRefreshRunning = true;
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setRefreshing(true);
+        }
+
+        refreshExecutor.execute(() -> {
+            boolean synced = false;
+            try {
+                synced = syncManager.syncNow();
+            } catch (Exception e) {
+                Log.e(TAG, "Manual refresh sync failed", e);
+            }
+            boolean finalSynced = synced;
+            runOnUiThread(() -> finishManualRefresh(finalSynced));
+        });
+    }
+
+    private void finishManualRefresh(boolean synced) {
+        if (isDestroyed()) {
+            return;
+        }
+        isManualRefreshRunning = false;
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setRefreshing(false);
+        }
+        updatePullToRefreshEnabled();
+
+        if (preferenceHelper != null && !preferenceHelper.hasAuthToken()) {
+            openLoginAndFinish();
+            return;
+        }
+    }
+
+    private void updatePullToRefreshEnabled() {
+        if (swipeRefreshLayout == null) {
+            return;
+        }
+        swipeRefreshLayout.setEnabled(isPullToRefreshAllowed());
+        if (!swipeRefreshLayout.isEnabled() && !isManualRefreshRunning) {
+            swipeRefreshLayout.setRefreshing(false);
+        }
+    }
+
+    private boolean isPullToRefreshAllowed() {
+        boolean fullScreenVisible = fullScreenFragmentContainer != null
+                && fullScreenFragmentContainer.getVisibility() == View.VISIBLE;
+        boolean sidebarVisible = sidebarPanel != null && sidebarPanel.getVisibility() == View.VISIBLE;
+        return selectedBottomNavItem != R.id.nav_matrix && !fullScreenVisible && !sidebarVisible;
+    }
+
+    private boolean isCurrentFragmentScrolledUp() {
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.main_fragment_container);
+        View fragmentView = fragment == null ? null : fragment.getView();
+        return canScrollUp(fragmentView);
+    }
+
+    private boolean canScrollUp(View view) {
+        if (view == null || view.getVisibility() != View.VISIBLE) {
+            return false;
+        }
+        if (view.canScrollVertically(-1)) {
+            return true;
+        }
+        if (!(view instanceof ViewGroup)) {
+            return false;
+        }
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            if (canScrollUp(group.getChildAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setBottomMargin(View view, int bottomMargin) {
@@ -175,6 +291,7 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.main_fragment_container, fragment)
                 .commit();
         applyBottomNavigationState(itemId);
+        updatePullToRefreshEnabled();
     }
 
     /**
@@ -265,6 +382,7 @@ public class MainActivity extends AppCompatActivity {
         }
         fullScreenFragmentContainer.setVisibility(View.VISIBLE);
         fullScreenFragmentContainer.bringToFront();
+        updatePullToRefreshEnabled();
         getSupportFragmentManager().beginTransaction()
                 .setReorderingAllowed(true)
                 .replace(R.id.fullScreenFragmentContainer, fragment)
@@ -338,6 +456,7 @@ public class MainActivity extends AppCompatActivity {
         if (fragment != null) {
             fullScreenFragmentContainer.bringToFront();
         }
+        updatePullToRefreshEnabled();
     }
 
     private void selectBottomNavigationItem(int selectedItemId) {
@@ -382,6 +501,13 @@ public class MainActivity extends AppCompatActivity {
             applySavedThemeMode();
             recreate();
         }
+        updatePullToRefreshEnabled();
+    }
+
+    @Override
+    protected void onDestroy() {
+        refreshExecutor.shutdownNow();
+        super.onDestroy();
     }
 
     private void applySavedThemeMode() {

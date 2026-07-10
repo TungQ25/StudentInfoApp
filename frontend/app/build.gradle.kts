@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.okhttpLogging)
     implementation(libs.workRuntime)
     implementation(libs.emoji2Picker)
+    implementation(libs.swipeRefreshLayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
