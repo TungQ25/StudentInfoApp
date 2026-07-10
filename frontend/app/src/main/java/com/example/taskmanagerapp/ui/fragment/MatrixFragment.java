@@ -2,7 +2,6 @@ package com.example.taskmanagerapp.ui.fragment;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,7 +9,6 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -329,7 +327,6 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
         menu.setOnMenuItemClickListener(item -> {
             showCompleted = !showCompleted;
             renderMatrix();
-            Toast.makeText(requireContext(), showCompleted ? "Showing completed" : "Completed hidden", Toast.LENGTH_SHORT).show();
             return true;
         });
         menu.show();

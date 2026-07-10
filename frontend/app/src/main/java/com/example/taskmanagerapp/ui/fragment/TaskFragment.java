@@ -101,6 +101,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     private PreferenceHelper preferenceHelper;
     private ActivityResultLauncher<Intent> addTaskLauncher;
     private final List<Task> allTasks = new ArrayList<>();
+    private final List<String> newlyCreatedTaskIds = new ArrayList<>();
     private final List<Category> categories = new ArrayList<>();
     private String selectedItemId = SELECT_ALL;
     private boolean categoriesLoaded = false;
@@ -133,6 +134,8 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
                 );
                 task.setWontDo(data.getBooleanExtra("wontDo", false));
                 task.setImagePath(data.getStringExtra(AddTaskActivity.EXTRA_IMAGE_PATH));
+                newlyCreatedTaskIds.remove(task.getId());
+                newlyCreatedTaskIds.add(0, task.getId());
                 taskViewModel.addTask(task);
             }
         });
@@ -241,7 +244,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
             @Override
             public void onSidebarSettingsClick() {
-                Toast.makeText(requireContext(), "Open Settings from bottom navigation", Toast.LENGTH_SHORT).show();
+                openSettingsFromSidebar();
             }
             @Override
             public void onSidebarNotificationClick() {
@@ -579,6 +582,13 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         }
     }
 
+    private void openSettingsFromSidebar() {
+        showSidebar(false);
+        if (requireActivity() instanceof MainActivity) {
+            ((MainActivity) requireActivity()).showFullScreenFragment(SettingsFragment.newOverlayInstance());
+        }
+    }
+
     private String resolveSelectedTitle(List<SidebarItem> items) {
         for (SidebarItem item : items) {
             if (item.isSelected()) return item.getTitle();
@@ -745,8 +755,27 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         for (Task task : allTasks) {
             if (matchesSelectedFilter(task)) filteredTasks.add(task);
         }
+        moveNewlyCreatedTasksToTop(filteredTasks);
         taskAdapter.submitList(filteredTasks); // thêm list task vào adapter
         updateMultiSelectControls(filteredTasks);
+    }
+
+    private void moveNewlyCreatedTasksToTop(List<Task> tasks) {
+        if (newlyCreatedTaskIds.isEmpty() || tasks.size() < 2) {
+            return;
+        }
+
+        List<Task> createdTasks = new ArrayList<>();
+        for (String taskId : newlyCreatedTaskIds) {
+            for (int i = 0; i < tasks.size(); i++) {
+                Task task = tasks.get(i);
+                if (task != null && taskId.equals(task.getId())) {
+                    createdTasks.add(tasks.remove(i));
+                    break;
+                }
+            }
+        }
+        tasks.addAll(0, createdTasks);
     }
 
     /**
