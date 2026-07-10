@@ -51,14 +51,17 @@
                     android:gravity="center"
                     android:orientation="horizontal">
 
-                    <ImageView
+                    <TextView
                         android:id="@+id/ivToolbarTitleIcon"
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:contentDescription="@string/task_editor_category"
-                        android:src="@drawable/ic_nav_task_outline"
-                        android:visibility="gone"
-                        app:tint="#D7DDE5" />
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:text="&#x1F5C2;&#xFE0F;"
+                        android:textColor="#D7DDE5"
+                        android:textSize="18sp"
+                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/tvSelectedFilter"
@@ -109,6 +112,19 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <View
+        android:id="@+id/sidebarEdgeGesture"
+        android:layout_width="24dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout" />
+
+    <View
         android:id="@+id/sidebarScrim"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -116,7 +132,7 @@
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -129,7 +145,7 @@
         android:elevation="16dp"
         android:orientation="vertical"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 

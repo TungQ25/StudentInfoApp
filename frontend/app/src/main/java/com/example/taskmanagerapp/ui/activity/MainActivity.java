@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
@@ -46,10 +45,12 @@ public class MainActivity extends AppCompatActivity {
     private View appBarLayout;
     private MaterialToolbar toolbar;
     private TextView toolbarTitle;
-    private ImageView toolbarTitleIcon;
+    private TextView toolbarTitleIcon;
     private ImageButton toolbarLeftButton;
     private ImageButton toolbarRightButton;
     private View bottomNavigation;
+    private View sidebarPanel;
+    private View sidebarScrim;
     private View fullScreenFragmentContainer;
     private TaskToolbarController taskToolbarController;
     private HabitToolbarController habitToolbarController;
@@ -81,11 +82,9 @@ public class MainActivity extends AppCompatActivity {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
             // Điều chỉnh lề thanh điều hướng phía dưới để phù hợp với thanh điều hướng hệ thống
-            if (bottomNavigation != null) {
-                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) bottomNavigation.getLayoutParams();
-                params.bottomMargin = systemBars.bottom;
-                bottomNavigation.setLayoutParams(params);
-            }
+            setBottomMargin(bottomNavigation, systemBars.bottom);
+            setBottomMargin(sidebarPanel, systemBars.bottom);
+            setBottomMargin(sidebarScrim, systemBars.bottom);
             return insets;
         });
 
@@ -125,9 +124,23 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         bottomNavigation = findViewById(R.id.bottomNavigation);
+        sidebarPanel = findViewById(R.id.sidebarPanel);
+        sidebarScrim = findViewById(R.id.sidebarScrim);
         fullScreenFragmentContainer = findViewById(R.id.fullScreenFragmentContainer);
         preferenceHelper = new PreferenceHelper(this);
         appliedTheme = preferenceHelper.getTheme();
+    }
+
+    private void setBottomMargin(View view, int bottomMargin) {
+        if (view == null || !(view.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) {
+            return;
+        }
+        ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+        if (params.bottomMargin == bottomMargin) {
+            return;
+        }
+        params.bottomMargin = bottomMargin;
+        view.setLayoutParams(params);
     }
 
     private void setupBottomNavigation() {
@@ -239,6 +252,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void setTaskToolbarTitleIcon(String icon) {
+        if (toolbarTitleIcon != null) {
+            String cleanIcon = icon == null ? "" : icon.trim();
+            toolbarTitleIcon.setText(cleanIcon.isEmpty() || "#".equals(cleanIcon) ? "\u25CE" : cleanIcon);
+        }
+    }
+
     public void showFullScreenFragment(Fragment fragment) {
         if (fragment == null || fullScreenFragmentContainer == null) {
             return;
@@ -294,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
     private void setToolbarTitleIconVisible(boolean visible) {
         if (toolbarTitleIcon != null) {
             toolbarTitleIcon.setVisibility(visible ? View.VISIBLE : View.GONE);
-            toolbarTitleIcon.setColorFilter(Color.rgb(215, 221, 229));
+            toolbarTitleIcon.setTextColor(Color.rgb(215, 221, 229));
         }
         if (toolbarTitle != null) {
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) toolbarTitle.getLayoutParams();

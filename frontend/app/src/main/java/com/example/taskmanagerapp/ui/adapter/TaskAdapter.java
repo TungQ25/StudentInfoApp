@@ -254,13 +254,14 @@ public class TaskAdapter extends ListAdapter<Task, TaskAdapter.TaskViewHolder> {
 
         private String categoryIcon(String categoryId) {
             if (categoryId == null || categoryId.trim().isEmpty()) {
-                return "#";
+                return "\uD83D\uDCE5";
             }
             Category category = categoryById.get(categoryId);
             if (category == null || category.getIcon() == null || category.getIcon().trim().isEmpty()) {
-                return "#";
+                return "\uD83D\uDCCB";
             }
-            return category.getIcon().trim();
+            String icon = category.getIcon().trim();
+            return "#".equals(icon) ? "\uD83D\uDCCB" : icon;
         }
 
         private String displayDeadline(String deadline) {

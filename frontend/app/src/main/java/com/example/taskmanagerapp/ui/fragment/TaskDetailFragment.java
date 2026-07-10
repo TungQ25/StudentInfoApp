@@ -137,14 +137,14 @@ public class TaskDetailFragment extends Fragment {
         TextView tvTitle = view.findViewById(R.id.tvDetailTitle);
         TextView tvDescription = view.findViewById(R.id.tvDetailDescription);
         TextView tvCategory = view.findViewById(R.id.tvDetailCategory);
-        ImageView ivCategoryIcon = view.findViewById(R.id.tvDetailCategoryIcon);
+        TextView tvCategoryIcon = view.findViewById(R.id.tvDetailCategoryIcon);
         TextView tvDeadline = view.findViewById(R.id.tvDetailDeadline);
         ImageView tvPriority = view.findViewById(R.id.tvDetailPriority);
         CheckBox checkComplete = view.findViewById(R.id.checkDetailComplete);
         ImageView ivAttachment = view.findViewById(R.id.ivDetailAttachment);
 
-        bindTaskData(tvTitle, tvDescription, tvCategory, ivCategoryIcon, tvDeadline, tvPriority, checkComplete, ivAttachment);
-        observeCategories(tvCategory);
+        bindTaskData(tvTitle, tvDescription, tvCategory, tvCategoryIcon, tvDeadline, tvPriority, checkComplete, ivAttachment);
+        observeCategories(tvCategory, tvCategoryIcon);
         applyTopBarProgress(0f);
         bindInteractions(view, tvTitle, tvDescription, tvDeadline, tvPriority, checkComplete, ivAttachment);
 
@@ -162,7 +162,7 @@ public class TaskDetailFragment extends Fragment {
     private void bindTaskData(TextView tvTitle,
                               TextView tvDescription,
                               TextView tvCategory,
-                              ImageView ivCategoryIcon,
+                              TextView tvCategoryIcon,
                               TextView tvDeadline,
                               ImageView tvPriority,
                               CheckBox checkComplete,
@@ -174,7 +174,7 @@ public class TaskDetailFragment extends Fragment {
         tvTitle.setText(isBlank(task.getTitle()) ? getString(R.string.task_editor_title_hint) : task.getTitle());
         bindDescription(tvDescription, task.getDescription());
         tvCategory.setText(isBlank(categoryName) ? "Inbox" : categoryName);
-        ivCategoryIcon.setImageResource(R.drawable.ic_nav_task_outline);
+        tvCategoryIcon.setText(cleanCategoryIcon(isBlank(categoryIcon) ? "\uD83D\uDCE5" : categoryIcon));
         String deadline = task.getDeadline();
         tvDeadline.setText(isBlank(deadline) ? "Date & Reminder" : deadline);
         bindPriorityChip(tvPriority, task.getPriority());
@@ -568,19 +568,19 @@ public class TaskDetailFragment extends Fragment {
         chip.setBackgroundResource(R.drawable.bg_task_editor_icon_button);
     }
 
-    private void observeCategories(TextView tvCategory) {
+    private void observeCategories(TextView tvCategory, TextView tvCategoryIcon) {
         if (categoryViewModel == null) {
             return;
         }
         categoryViewModel.getCategories().observe(getViewLifecycleOwner(), categories -> {
             categoryOptions.clear();
-            categoryOptions.add(new CategoryOption(null, "Inbox"));
+            categoryOptions.add(new CategoryOption(null, "Inbox", "\uD83D\uDCE5"));
             if (categories != null) {
                 for (Category category : categories) {
-                    categoryOptions.add(new CategoryOption(category.getId(), category.getName()));
+                    categoryOptions.add(new CategoryOption(category.getId(), category.getName(), cleanCategoryIcon(category.getIcon())));
                 }
             }
-            updateDetailCategoryTitle(tvCategory);
+            updateDetailCategoryTitle(tvCategory, tvCategoryIcon);
         });
     }
 
@@ -589,14 +589,14 @@ public class TaskDetailFragment extends Fragment {
             return;
         }
         if (categoryOptions.isEmpty()) {
-            categoryOptions.add(new CategoryOption(null, "Inbox"));
+            categoryOptions.add(new CategoryOption(null, "Inbox", "\uD83D\uDCE5"));
         }
 
         String[] labels = new String[categoryOptions.size()];
         int checked = 0;
         for (int i = 0; i < categoryOptions.size(); i++) {
             CategoryOption option = categoryOptions.get(i);
-            labels[i] = option.name;
+            labels[i] = option.icon + "  " + option.name;
             if (sameString(task.getCategoryId(), option.id)) {
                 checked = i;
             }
@@ -608,6 +608,7 @@ public class TaskDetailFragment extends Fragment {
                     CategoryOption option = categoryOptions.get(which);
                     task.setCategoryId(option.id);
                     categoryName = option.name;
+                    categoryIcon = option.icon;
                     updateDetailCategoryTitle();
                     if (taskViewModel != null) {
                         taskViewModel.updateTask(task);
@@ -647,15 +648,19 @@ public class TaskDetailFragment extends Fragment {
         if (view == null) {
             return;
         }
-        updateDetailCategoryTitle(view.findViewById(R.id.tvDetailCategory));
+        updateDetailCategoryTitle(view.findViewById(R.id.tvDetailCategory), view.findViewById(R.id.tvDetailCategoryIcon));
     }
 
-    private void updateDetailCategoryTitle(TextView tvCategory) {
+    private void updateDetailCategoryTitle(TextView tvCategory, TextView tvCategoryIcon) {
         if (tvCategory == null) {
             return;
         }
         categoryName = getSelectedCategoryName();
         tvCategory.setText(categoryName);
+        categoryIcon = getSelectedCategoryIcon();
+        if (tvCategoryIcon != null) {
+            tvCategoryIcon.setText(categoryIcon);
+        }
     }
 
     private String getSelectedCategoryName() {
@@ -668,6 +673,26 @@ public class TaskDetailFragment extends Fragment {
             }
         }
         return isBlank(categoryName) ? "Inbox" : categoryName;
+    }
+
+    private String getSelectedCategoryIcon() {
+        if (task == null || isBlank(task.getCategoryId())) {
+            return "\uD83D\uDCE5";
+        }
+        for (CategoryOption option : categoryOptions) {
+            if (sameString(task.getCategoryId(), option.id)) {
+                return cleanCategoryIcon(option.icon);
+            }
+        }
+        return cleanCategoryIcon(categoryIcon);
+    }
+
+    private String cleanCategoryIcon(String icon) {
+        String cleanIcon = icon == null ? "" : icon.trim();
+        if (cleanIcon.isEmpty() || "#".equals(cleanIcon)) {
+            return "\uD83D\uDCCB";
+        }
+        return cleanIcon;
     }
 
     private void openEditTask() {
@@ -869,10 +894,12 @@ public class TaskDetailFragment extends Fragment {
     private static class CategoryOption {
         final String id;
         final String name;
+        final String icon;
 
-        CategoryOption(String id, String name) {
+        CategoryOption(String id, String name, String icon) {
             this.id = id;
             this.name = name;
+            this.icon = icon;
         }
     }
 }

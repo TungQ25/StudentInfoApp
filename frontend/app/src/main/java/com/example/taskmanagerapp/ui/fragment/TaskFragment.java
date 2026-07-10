@@ -1,5 +1,9 @@
 package com.example.taskmanagerapp.ui.fragment;
 
+import android.annotation.SuppressLint;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -13,10 +17,14 @@ import android.text.InputType;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -73,6 +81,9 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     private static final int MENU_FILTER_CATEGORY = 9;
     private static final int MENU_EMPTY_TRASH = 10;
     private static final String DEFAULT_CATEGORY_ICON = "\uD83D\uDCCB";
+    private static final int SIDEBAR_FALLBACK_WIDTH_DP = 320;
+    private static final long SIDEBAR_ANIMATION_DURATION_MS = 220L;
+    private static final float SIDEBAR_OPEN_PROGRESS_THRESHOLD = 0.35f;
     private RecyclerView rvTasks;
     private RecyclerView rvSidebar;
     private FloatingActionButton btnAddTask;
@@ -80,6 +91,8 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     private TextView tvSelectedFilter;
     private View sidebarPanel; // Thanh sidebar
     private View sidebarScrim; // lớp phủ mờ
+    private View sidebarEdgeGesture;
+    private ValueAnimator sidebarAnimator;
     private TaskAdapter taskAdapter;
     private SidebarAdapter sidebarAdapter;
     private TaskViewModel taskViewModel;
@@ -94,6 +107,15 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     private boolean multiSelectMode = false;
     private boolean allowEmptyMultiSelectMode = false;
     private String systemCategoryFilterId = null;
+    private boolean sidebarGestureActive = false;
+    private boolean sidebarGestureDragging = false;
+    private float sidebarDownX = 0f;
+    private float sidebarDownY = 0f;
+    private float sidebarStartProgress = 0f;
+    private float sidebarProgress = 0f;
+    private int sidebarTouchSlop = 0;
+    private int sidebarMinFlingVelocity = 0;
+    private VelocityTracker sidebarVelocityTracker;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -132,10 +154,12 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         tvSelectedFilter = requireActivity().findViewById(R.id.tvSelectedFilter);
         sidebarPanel = requireActivity().findViewById(R.id.sidebarPanel);
         sidebarScrim = requireActivity().findViewById(R.id.sidebarScrim);
+        sidebarEdgeGesture = requireActivity().findViewById(R.id.sidebarEdgeGesture);
         preferenceHelper = new PreferenceHelper(requireContext());
         restoreSelectedFilter();
         if (requireActivity() instanceof MainActivity) {
             ((MainActivity) requireActivity()).showTaskToolbar(currentSelectedFilterTitle(), this);
+            ((MainActivity) requireActivity()).setTaskToolbarTitleIcon(currentSelectedToolbarIcon());
         }
         taskViewModel = new ViewModelProvider(requireActivity()).get(TaskViewModel.class);
         categoryViewModel = new ViewModelProvider(requireActivity()).get(CategoryViewModel.class);
@@ -211,6 +235,11 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
             // TODO: Thiết lập lại setting và notification
             @Override
+            public void onSidebarAvatarClick() {
+                openAccountFromSidebar();
+            }
+
+            @Override
             public void onSidebarSettingsClick() {
                 Toast.makeText(requireContext(), "Open Settings from bottom navigation", Toast.LENGTH_SHORT).show();
             }
@@ -271,8 +300,15 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     private void setupActions() {
         btnAddTask.setOnClickListener(v -> openAddTask());
         btnDeleteSelected.setOnClickListener(v -> deleteSelectedTasks());
+        ViewConfiguration configuration = ViewConfiguration.get(requireContext());
+        sidebarTouchSlop = configuration.getScaledTouchSlop();
+        sidebarMinFlingVelocity = configuration.getScaledMinimumFlingVelocity();
         if (sidebarScrim != null) sidebarScrim.setOnClickListener(v -> showSidebar(false));
-        showSidebar(false);
+        if (sidebarEdgeGesture != null) {
+            sidebarEdgeGesture.setVisibility(View.VISIBLE);
+            sidebarEdgeGesture.setOnTouchListener(this::handleSidebarEdgeGesture);
+        }
+        setSidebarProgress(0f, false);
         updateAddTaskButtonVisibility();
     }
 
@@ -380,7 +416,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
     private SidebarItem categoryItem(Category category, SidebarItem.Type type) {
         String id = "category:" + category.getId();
-        String icon = category.getIcon() == null || category.getIcon().isEmpty() ? "#" : category.getIcon();
+        String icon = cleanCategoryIcon(category.getIcon());
         return new SidebarItem(type, id, category.getName(), icon, countCategory(category.getId()), true, id.equals(selectedItemId), category, null, null);
     }
 
@@ -466,7 +502,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
                 return "\uD83D\uDDD3\uFE0F";
             case ALL:
             default:
-                return "\u25CE";
+                return "\uD83D\uDDC2\uFE0F";
         }
     }
 
@@ -537,6 +573,13 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         showSidebar(false);
     }
 
+    private void openAccountFromSidebar() {
+        showSidebar(false);
+        if (requireActivity() instanceof MainActivity) {
+            ((MainActivity) requireActivity()).showFullScreenFragment(new AccountFragment());
+        }
+    }
+
     private String resolveSelectedTitle(List<SidebarItem> items) {
         for (SidebarItem item : items) {
             if (item.isSelected()) return item.getTitle();
@@ -575,7 +618,29 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         if (tvSelectedFilter != null) tvSelectedFilter.setText(displayTitle);
         if (getActivity() instanceof MainActivity) {
             ((MainActivity) getActivity()).setTaskToolbarTitle(displayTitle);
+            ((MainActivity) getActivity()).setTaskToolbarTitleIcon(currentSelectedToolbarIcon());
         }
+    }
+
+    private String currentSelectedToolbarIcon() {
+        if (selectedItemId != null && selectedItemId.startsWith("smart:")) {
+            try {
+                return smartFilterIcon(SmartFilter.valueOf(selectedItemId.substring("smart:".length())));
+            } catch (IllegalArgumentException ignored) {
+                return smartFilterIcon(SmartFilter.ALL);
+            }
+        }
+        if (selectedItemId != null && selectedItemId.startsWith("system:")) {
+            try {
+                return systemFilterIcon(SystemFilter.valueOf(selectedItemId.substring("system:".length())));
+            } catch (IllegalArgumentException ignored) {
+                return smartFilterIcon(SmartFilter.ALL);
+            }
+        }
+        if (selectedItemId != null && selectedItemId.startsWith("category:")) {
+            return getCategoryIcon(selectedItemId.substring("category:".length()));
+        }
+        return smartFilterIcon(SmartFilter.ALL);
     }
 
     private void openAddTask() {
@@ -1222,9 +1287,175 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     }
 
     private void showSidebar(boolean show) {
+        animateSidebarTo(show ? 1f : 0f);
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private boolean handleSidebarEdgeGesture(View view, MotionEvent event) {
+        if (sidebarPanel == null) return false;
+
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                beginSidebarGesture(event);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                return updateSidebarGesture(event);
+            case MotionEvent.ACTION_UP:
+                finishSidebarGesture(event, false);
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+                finishSidebarGesture(event, true);
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    private void beginSidebarGesture(MotionEvent event) {
+        cancelSidebarAnimation();
+        sidebarGestureActive = true;
+        sidebarGestureDragging = false;
+        sidebarDownX = event.getRawX();
+        sidebarDownY = event.getRawY();
+        sidebarStartProgress = sidebarProgress;
+        obtainSidebarVelocityTracker();
+        sidebarVelocityTracker.addMovement(event);
+        setSidebarProgress(sidebarProgress, true);
+    }
+
+    private boolean updateSidebarGesture(MotionEvent event) {
+        if (!sidebarGestureActive) return false;
+        if (sidebarVelocityTracker != null) sidebarVelocityTracker.addMovement(event);
+
+        float dx = event.getRawX() - sidebarDownX;
+        float dy = event.getRawY() - sidebarDownY;
+        if (!sidebarGestureDragging) {
+            if (Math.abs(dx) < sidebarTouchSlop && Math.abs(dy) < sidebarTouchSlop) {
+                return true;
+            }
+            if (dx <= 0f || Math.abs(dy) > Math.abs(dx)) {
+                finishSidebarGesture(event, true);
+                return false;
+            }
+            sidebarGestureDragging = true;
+        }
+
+        float progress = sidebarStartProgress + Math.max(0f, dx) / getSidebarWidth();
+        setSidebarProgress(progress, true);
+        return true;
+    }
+
+    private void finishSidebarGesture(MotionEvent event, boolean cancelled) {
+        if (!sidebarGestureActive) return;
+        float xVelocity = 0f;
+        if (sidebarVelocityTracker != null) {
+            sidebarVelocityTracker.addMovement(event);
+            sidebarVelocityTracker.computeCurrentVelocity(1000);
+            xVelocity = sidebarVelocityTracker.getXVelocity();
+        }
+        boolean shouldOpen = !cancelled && shouldOpenSidebarAfterGesture(xVelocity);
+        recycleSidebarVelocityTracker();
+        sidebarGestureActive = false;
+        sidebarGestureDragging = false;
+        animateSidebarTo(shouldOpen ? 1f : 0f);
+    }
+
+    private boolean shouldOpenSidebarAfterGesture(float xVelocity) {
+        if (xVelocity > sidebarMinFlingVelocity) return true;
+        if (xVelocity < -sidebarMinFlingVelocity) return false;
+        return sidebarProgress >= SIDEBAR_OPEN_PROGRESS_THRESHOLD;
+    }
+
+    private void animateSidebarTo(float targetProgress) {
         if (sidebarPanel == null) return;
-        sidebarPanel.setVisibility(show ? View.VISIBLE : View.GONE);
-        if (sidebarScrim != null) sidebarScrim.setVisibility(show ? View.VISIBLE : View.GONE);
+        cancelSidebarAnimation();
+
+        final float startProgress = sidebarProgress;
+        final float endProgress = clampSidebarProgress(targetProgress);
+        if (Math.abs(startProgress - endProgress) < 0.001f) {
+            setSidebarProgress(endProgress, false);
+            return;
+        }
+
+        setSidebarProgress(startProgress, true);
+        sidebarAnimator = ValueAnimator.ofFloat(startProgress, endProgress);
+        sidebarAnimator.setInterpolator(new DecelerateInterpolator());
+        sidebarAnimator.setDuration(sidebarAnimationDuration(startProgress, endProgress));
+        sidebarAnimator.addUpdateListener(animation -> {
+            float progress = (float) animation.getAnimatedValue();
+            setSidebarProgress(progress, true);
+        });
+        sidebarAnimator.addListener(new AnimatorListenerAdapter() {
+            private boolean cancelled = false;
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                cancelled = true;
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (!cancelled) {
+                    setSidebarProgress(endProgress, false);
+                }
+                if (sidebarAnimator == animation) {
+                    sidebarAnimator = null;
+                }
+            }
+        });
+        sidebarAnimator.start();
+    }
+
+    private long sidebarAnimationDuration(float startProgress, float endProgress) {
+        float distance = Math.abs(endProgress - startProgress);
+        return Math.max(90L, Math.round(SIDEBAR_ANIMATION_DURATION_MS * distance));
+    }
+
+    private void setSidebarProgress(float progress, boolean keepVisible) {
+        if (sidebarPanel == null) return;
+
+        sidebarProgress = clampSidebarProgress(progress);
+        int width = getSidebarWidth();
+        boolean visible = keepVisible || sidebarProgress > 0f;
+        sidebarPanel.setVisibility(visible ? View.VISIBLE : View.GONE);
+        sidebarPanel.setTranslationX((sidebarProgress - 1f) * width);
+
+        if (sidebarScrim != null) {
+            sidebarScrim.setVisibility(visible ? View.VISIBLE : View.GONE);
+            sidebarScrim.setAlpha(sidebarProgress);
+        }
+    }
+
+    private float clampSidebarProgress(float progress) {
+        return Math.max(0f, Math.min(1f, progress));
+    }
+
+    private int getSidebarWidth() {
+        if (sidebarPanel == null) return dp(SIDEBAR_FALLBACK_WIDTH_DP);
+        int width = sidebarPanel.getWidth();
+        if (width > 0) return width;
+        ViewGroup.LayoutParams params = sidebarPanel.getLayoutParams();
+        if (params != null && params.width > 0) return params.width;
+        return dp(SIDEBAR_FALLBACK_WIDTH_DP);
+    }
+
+    private void cancelSidebarAnimation() {
+        if (sidebarAnimator != null) {
+            sidebarAnimator.cancel();
+            sidebarAnimator = null;
+        }
+    }
+
+    private void obtainSidebarVelocityTracker() {
+        recycleSidebarVelocityTracker();
+        sidebarVelocityTracker = VelocityTracker.obtain();
+    }
+
+    private void recycleSidebarVelocityTracker() {
+        if (sidebarVelocityTracker != null) {
+            sidebarVelocityTracker.recycle();
+            sidebarVelocityTracker = null;
+        }
     }
 
     /**
@@ -1400,14 +1631,13 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     }
 
     private String getCategoryIcon(String categoryId) {
-        if (isBlank(categoryId)) return "#";
+        if (isBlank(categoryId)) return "\uD83D\uDCE5";
         for (Category category : categories) {
             if (categoryId.equals(category.getId())) {
-                String icon = category.getIcon();
-                return isBlank(icon) ? "#" : icon;
+                return cleanCategoryIcon(category.getIcon());
             }
         }
-        return "#";
+        return "\uD83D\uDCCB";
     }
 
     private String currentUserName() {
@@ -1439,7 +1669,16 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
     @Override
     public void onDestroyView() {
-        showSidebar(false);
+        cancelSidebarAnimation();
+        recycleSidebarVelocityTracker();
+        setSidebarProgress(0f, false);
+        if (sidebarEdgeGesture != null) {
+            sidebarEdgeGesture.setOnTouchListener(null);
+            sidebarEdgeGesture.setVisibility(View.GONE);
+        }
+        if (sidebarScrim != null) {
+            sidebarScrim.setOnClickListener(null);
+        }
         if (getActivity() instanceof MainActivity) {
             ((MainActivity) getActivity()).clearTaskToolbarController(this);
         }
@@ -1451,6 +1690,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         tvSelectedFilter = null;
         sidebarPanel = null;
         sidebarScrim = null;
+        sidebarEdgeGesture = null;
         taskAdapter = null;
         sidebarAdapter = null;
     }
