@@ -22,6 +22,7 @@ public final class TaskContract {
     public static final String COL_SYNCED = "synced";
     public static final String COL_DELETED = "deleted";
     public static final String COL_PERMANENT_DELETE_PENDING = "permanent_delete_pending";
+    public static final String COL_REMOTE_EXISTS = "remote_exists";
     public static final String COL_USER_ID = "user_id";
     public static final String COL_GROUP_NAME = "group_name";
     public static final String COL_FREQUENCY = "frequency";

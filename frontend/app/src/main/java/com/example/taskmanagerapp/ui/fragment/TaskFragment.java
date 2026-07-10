@@ -1619,6 +1619,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
                 existing.isSynced(),
                 existing.isDeleted(),
                 existing.isPermanentDeletePending(),
+                existing.isRemoteExists(),
                 existing.getUserId());
         taskViewModel.updateTask(updatedTask);
     }

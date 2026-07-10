@@ -264,6 +264,7 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
                 existing.isSynced(),
                 existing.isDeleted(),
                 existing.isPermanentDeletePending(),
+                existing.isRemoteExists(),
                 existing.getUserId());
         taskViewModel.updateTask(updatedTask);
     }
