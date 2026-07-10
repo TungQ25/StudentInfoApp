@@ -97,7 +97,11 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
             ((MainActivity) requireActivity()).showMatrixToolbar(getString(R.string.title_matrix), this);
         }
 
-        btnAddTask.setOnClickListener(v -> addTaskLauncher.launch(new Intent(requireContext(), AddTaskActivity.class)));
+        btnAddTask.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), AddTaskActivity.class);
+            intent.putExtra(AddTaskActivity.EXTRA_FOCUS_TARGET, AddTaskActivity.FOCUS_TITLE);
+            addTaskLauncher.launch(intent);
+        });
         setupTaskDetailResultListener();
         observeData();
         taskViewModel.syncTasks();

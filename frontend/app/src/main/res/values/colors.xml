@@ -21,6 +21,9 @@
   <color name="colorDanger">#D84C4C</color>
   <color name="colorOnDanger">#FFFFFF</color>
   <color name="colorDangerContainer">#3B171A</color>
+  <color name="colorDangerButtonBackground">#26D84C4C</color>
+  <color name="colorDangerButtonStroke">#66D84C4C</color>
+  <color name="colorDangerButtonText">#E07171</color>
   <color name="colorSettingsAvatarFill">#123D39</color>
   <color name="bottom_nav_bar">#181D21</color>
   <color name="bottom_nav_bar_stroke">#2C353D</color>

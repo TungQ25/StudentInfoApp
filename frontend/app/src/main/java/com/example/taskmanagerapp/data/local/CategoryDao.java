@@ -36,7 +36,7 @@ public interface CategoryDao {
     Category getCategoryById(String id, String userId);
 
     // Lấy category theo tên (không phân biệt hoa thường)
-    @Query("SELECT * FROM categories WHERE user_id = :userId AND LOWER(name) = LOWER(:name) AND deleted = 0 LIMIT 1")
+    @Query("SELECT * FROM categories WHERE user_id = :userId AND LOWER(name) = LOWER(:name) AND deleted = 0 AND hidden = 0 LIMIT 1")
     Category getByName(String userId, String name);
 
     // Lấy category theo thứ tự lớn nhất hiện có

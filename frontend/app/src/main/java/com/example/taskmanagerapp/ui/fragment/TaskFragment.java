@@ -2,11 +2,21 @@ package com.example.taskmanagerapp.ui.fragment;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.ContextThemeWrapper;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -18,6 +28,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.emoji2.emojipicker.EmojiPickerView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -61,7 +72,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
     private static final int MENU_SELECT = 8;
     private static final int MENU_FILTER_CATEGORY = 9;
     private static final int MENU_EMPTY_TRASH = 10;
-
+    private static final String DEFAULT_CATEGORY_ICON = "\uD83D\uDCCB";
     private RecyclerView rvTasks;
     private RecyclerView rvSidebar;
     private FloatingActionButton btnAddTask;
@@ -324,7 +335,11 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         items.add(SidebarItem.header(currentUserName()));
 
         List<Category> pinned = new ArrayList<>();
-        for (Category category : categories) if (category.isPinned()) pinned.add(category);
+        for (Category category : categories) {
+            if (isVisibleCategory(category) && category.isPinned()) {
+                pinned.add(category);
+            }
+        }
         Collections.sort(pinned, Comparator.comparingInt(Category::getPinnedOrder));
 
         // TODO: sửa lại UI pinned để chỉ hiện icon
@@ -339,7 +354,11 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         }
 
         items.add(SidebarItem.section("Categories"));
-        for (Category category : categories) items.add(categoryItem(category, SidebarItem.Type.CATEGORY));
+        for (Category category : categories) {
+            if (isVisibleCategory(category)) {
+                items.add(categoryItem(category, SidebarItem.Type.CATEGORY));
+            }
+        }
 
         items.add(SidebarItem.section("System"));
         for (SystemFilter filter : orderedSystemFilters()) {
@@ -363,6 +382,10 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         String id = "category:" + category.getId();
         String icon = category.getIcon() == null || category.getIcon().isEmpty() ? "#" : category.getIcon();
         return new SidebarItem(type, id, category.getName(), icon, countCategory(category.getId()), true, id.equals(selectedItemId), category, null, null);
+    }
+
+    private boolean isVisibleCategory(Category category) {
+        return category != null && !category.isDeleted() && !category.isHidden();
     }
 
     private List<SmartFilter> orderedSmartFilters() {
@@ -431,20 +454,19 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         }
     }
 
-    // TODO: cập nhật icon UI không dùng chữ
     private String smartFilterIcon(SmartFilter filter) {
         switch (filter) {
             case INBOX:
-                return "I";
+                return "\uD83D\uDCE5";
             case TODAY:
-                return "T";
+                return "\u2600\uFE0F";
             case TOMORROW:
-                return "M";
+                return "\uD83C\uDF05";
             case NEXT_7_DAYS:
-                return "7";
+                return "\uD83D\uDDD3\uFE0F";
             case ALL:
             default:
-                return "A";
+                return "\u25CE";
         }
     }
 
@@ -476,16 +498,15 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         }
     }
 
-    // TODO: cập nhật icon UI không dùng chữ
     private String systemFilterIcon(SystemFilter filter) {
         switch (filter) {
             case WONT_DO:
-                return "X";
+                return "\uD83D\uDEAB";
             case TRASH:
-                return "D";
+                return "\uD83D\uDDD1\uFE0F";
             case COMPLETED:
             default:
-                return "C";
+                return "\u2705";
         }
     }
 
@@ -563,6 +584,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         }
 
         Intent intent = new Intent(requireContext(), AddTaskActivity.class);
+        intent.putExtra(AddTaskActivity.EXTRA_FOCUS_TARGET, AddTaskActivity.FOCUS_TITLE);
         if (selectedItemId.startsWith("category:")) {
             intent.putExtra("categoryId", selectedItemId.substring("category:".length()));
         }
@@ -759,7 +781,7 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         if (itemId == MENU_CATEGORY_EDIT) {
             Category category = currentSelectedCategory();
             if (category != null) {
-                showRenameCategoryDialog(category);
+                showEditCategoryDialog(category);
             }
             return true;
         }
@@ -868,12 +890,12 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         if (category == null) return;
         PopupMenu menu = new PopupMenu(requireContext(), anchor);
         menu.getMenu().add(category.isPinned() ? "Unpin" : "Pin");
-        menu.getMenu().add("Rename");
+        menu.getMenu().add("Edit");
         menu.getMenu().add("Delete");
         menu.setOnMenuItemClickListener(menuItem -> {
             String title = menuItem.getTitle().toString();
-            if ("Rename".equals(title)) {
-                showRenameCategoryDialog(category);
+            if ("Edit".equals(title)) {
+                showEditCategoryDialog(category);
             } else if ("Delete".equals(title)) {
                 confirmDeleteCategory(category);
             } else {
@@ -884,37 +906,302 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
         menu.show();
     }
 
-    // TODO: cập nhật UI AddCategory
     private void showAddCategoryDialog() {
-        LinearLayout layout = new LinearLayout(requireContext());
-        layout.setOrientation(LinearLayout.VERTICAL);
-        int padding = (int) (16 * getResources().getDisplayMetrics().density);
-        layout.setPadding(padding, padding, padding, 0);
-        EditText edtName = new EditText(requireContext());
-        edtName.setHint("Name");
-        EditText edtIcon = new EditText(requireContext());
-        edtIcon.setHint("Icon");
-        layout.addView(edtName);
-        layout.addView(edtIcon);
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Add category")
-                .setView(layout)
-                .setPositiveButton("Save", (dialog, which) -> categoryViewModel.addCategory(edtName.getText().toString(), edtIcon.getText().toString()))
-                .setNegativeButton("Cancel", null)
-                .show();
+        showCategoryEditorDialog(null);
     }
 
-    // TODO: cập nhật UI rename thành edit và thêm các chọn màu, icon
-    private void showRenameCategoryDialog(Category category) {
-        EditText input = new EditText(requireContext());
-        input.setText(category.getName());
-        input.setSelectAllOnFocus(true);
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Rename category")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> categoryViewModel.renameCategory(category, input.getText().toString()))
-                .setNegativeButton("Cancel", null)
-                .show();
+    private void showEditCategoryDialog(Category category) {
+        showCategoryEditorDialog(category);
+    }
+
+    private void showCategoryEditorDialog(@Nullable Category category) {
+        boolean isEdit = category != null;
+        Dialog dialog = new Dialog(requireContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout root = new LinearLayout(requireContext());
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18), dp(18), dp(18), dp(22));
+        root.setBackground(roundedDrawable(color(R.color.colorBackground), dp(22)));
+
+        LinearLayout topBar = new LinearLayout(requireContext());
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        root.addView(topBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
+
+        TextView closeButton = editorCircleButton("x", color(R.color.colorSurface), color(R.color.colorOnSurface));
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        topBar.addView(closeButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
+
+        TextView title = editorText(isEdit ? "Edit List" : "New List", 18, color(R.color.colorOnSurface), true);
+        title.setGravity(Gravity.CENTER);
+        topBar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView saveButton = editorCircleButton("\u2713", color(R.color.colorAddAction), color(R.color.colorOnPrimary));
+        topBar.addView(saveButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
+
+        LinearLayout inputRow = new LinearLayout(requireContext());
+        inputRow.setGravity(Gravity.CENTER_VERTICAL);
+        inputRow.setOrientation(LinearLayout.HORIZONTAL);
+        inputRow.setPadding(dp(12), 0, dp(8), 0);
+        inputRow.setBackground(roundedDrawable(color(R.color.colorSurface), dp(12)));
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
+        inputParams.setMargins(0, dp(18), 0, 0);
+        root.addView(inputRow, inputParams);
+
+        final String[] selectedIcon = {cleanCategoryIcon(isEdit ? category.getIcon() : null)};
+        TextView iconButton = editorText(selectedIcon[0], 22, color(R.color.colorOnSurface), false);
+        iconButton.setGravity(Gravity.CENTER);
+        iconButton.setBackground(roundedDrawable(color(R.color.colorSurfaceVariant), dp(8)));
+        iconButton.setClickable(true);
+        iconButton.setFocusable(true);
+        iconButton.setOnClickListener(v -> showSystemIconPicker(iconButton, selectedIcon));
+        inputRow.addView(iconButton, new LinearLayout.LayoutParams(dp(38), dp(38)));
+
+        EditText nameInput = new EditText(requireContext());
+        nameInput.setSingleLine(true);
+        nameInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        nameInput.setHint("List name");
+        nameInput.setText(isEdit ? category.getName() : "");
+        nameInput.setSelectAllOnFocus(true);
+        nameInput.setTextColor(color(R.color.colorOnSurface));
+        nameInput.setHintTextColor(color(R.color.colorOnSurfaceVariant));
+        nameInput.setTextSize(16);
+        nameInput.setBackgroundColor(Color.TRANSPARENT);
+        LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        nameParams.setMargins(dp(12), 0, dp(8), 0);
+        inputRow.addView(nameInput, nameParams);
+
+        TextView clearButton = editorText("x", 16, color(R.color.colorOnSurfaceVariant), true);
+        clearButton.setGravity(Gravity.CENTER);
+        clearButton.setBackground(roundedDrawable(color(R.color.colorSurfaceVariant), dp(14)));
+        clearButton.setOnClickListener(v -> nameInput.setText(""));
+        inputRow.addView(clearButton, new LinearLayout.LayoutParams(dp(28), dp(28)));
+
+        LinearLayout optionsCard = new LinearLayout(requireContext());
+        optionsCard.setOrientation(LinearLayout.VERTICAL);
+        optionsCard.setBackground(roundedDrawable(color(R.color.colorSurface), dp(14)));
+        LinearLayout.LayoutParams optionsParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        optionsParams.setMargins(0, dp(16), 0, 0);
+        root.addView(optionsCard, optionsParams);
+        optionsCard.addView(categoryEditorOptionRow("Folder", "None", v -> Toast.makeText(requireContext(), "Folders are not implemented yet", Toast.LENGTH_SHORT).show()));
+        optionsCard.addView(editorDivider());
+        optionsCard.addView(categoryEditorOptionRow("List Type", "Task List", v -> Toast.makeText(requireContext(), "This list is a task list", Toast.LENGTH_SHORT).show()));
+        optionsCard.addView(editorDivider());
+        optionsCard.addView(categoryEditorOptionRow("Show in Smart List", "All tasks", v -> Toast.makeText(requireContext(), "Smart list visibility is not implemented yet", Toast.LENGTH_SHORT).show()));
+
+        if (isEdit) {
+            TextView deleteButton = editorText("Delete List", 16, color(R.color.colorDanger), false);
+            deleteButton.setGravity(Gravity.CENTER);
+            deleteButton.setPadding(0, dp(14), 0, dp(4));
+            LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            deleteParams.setMargins(0, dp(66), 0, 0);
+            root.addView(deleteButton, deleteParams);
+            deleteButton.setOnClickListener(v -> {
+                dialog.dismiss();
+                confirmDeleteCategory(category);
+            });
+        }
+
+        saveButton.setOnClickListener(v -> {
+            String newName = nameInput.getText().toString().trim();
+            if (newName.isEmpty()) {
+                Toast.makeText(requireContext(), "List name is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (isDuplicateCategoryName(category, newName)) {
+                Toast.makeText(requireContext(), "A list with this name already exists", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (isEdit) {
+                category.setName(newName);
+                category.setIcon(cleanCategoryIcon(selectedIcon[0]));
+                categoryViewModel.updateCategory(category);
+                if (("category:" + category.getId()).equals(selectedItemId)) {
+                    saveSelectedFilter(newName);
+                    updateSelectedFilterTitle(newName);
+                }
+            } else {
+                categoryViewModel.addCategory(newName, cleanCategoryIcon(selectedIcon[0]));
+            }
+            dialog.dismiss();
+        });
+
+        dialog.setContentView(root);
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+            params.copyFrom(window.getAttributes());
+            params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            params.gravity = Gravity.BOTTOM;
+            window.setAttributes(params);
+        }
+    }
+
+    private void showSystemIconPicker(TextView iconButton, String[] selectedIcon) {
+        Dialog dialog = new Dialog(requireContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout root = new LinearLayout(requireContext());
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18), dp(18), dp(18), dp(18));
+        root.setBackground(roundedDrawable(color(R.color.colorBackground), dp(24)));
+
+        LinearLayout topBar = new LinearLayout(requireContext());
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        root.addView(topBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
+
+        TextView closeButton = editorCircleButton("x", color(R.color.colorSurface), color(R.color.colorOnSurface));
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        topBar.addView(closeButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
+
+        LinearLayout titleColumn = new LinearLayout(requireContext());
+        titleColumn.setGravity(Gravity.CENTER);
+        titleColumn.setOrientation(LinearLayout.VERTICAL);
+        topBar.addView(titleColumn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView title = editorText("Select Icon", 18, color(R.color.colorOnSurface), true);
+        title.setGravity(Gravity.CENTER);
+        titleColumn.addView(title);
+
+        TextView subtitle = editorText("Choose an emoji for this list.", 13, color(R.color.colorOnSurfaceVariant), false);
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setPadding(0, dp(6), 0, 0);
+        titleColumn.addView(subtitle);
+
+        TextView spacer = editorText("", 1, color(R.color.colorOnSurface), false);
+        topBar.addView(spacer, new LinearLayout.LayoutParams(dp(44), dp(44)));
+
+        EmojiPickerView emojiPickerView = new EmojiPickerView(
+                new ContextThemeWrapper(requireContext(), R.style.Widget_TaskManager_EmojiPicker));
+        emojiPickerView.setEmojiGridColumns(8);
+        emojiPickerView.setEmojiGridRows(5.5f);
+        emojiPickerView.setBackgroundColor(color(R.color.colorBackground));
+        emojiPickerView.setOnEmojiPickedListener(item -> {
+            String emoji = item.getEmoji();
+            selectedIcon[0] = emoji;
+            iconButton.setText(emoji);
+            dialog.dismiss();
+        });
+        LinearLayout.LayoutParams pickerParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(358));
+        pickerParams.setMargins(0, dp(18), 0, 0);
+        root.addView(emojiPickerView, pickerParams);
+
+        TextView resetButton = editorText("Reset", 14, color(R.color.colorOnSurface), true);
+        resetButton.setGravity(Gravity.CENTER);
+        resetButton.setOnClickListener(v -> {
+            selectedIcon[0] = DEFAULT_CATEGORY_ICON;
+            iconButton.setText(DEFAULT_CATEGORY_ICON);
+            dialog.dismiss();
+        });
+        LinearLayout.LayoutParams resetParams = new LinearLayout.LayoutParams(dp(78), dp(38));
+        resetParams.gravity = Gravity.END;
+        resetParams.setMargins(0, dp(10), 0, 0);
+        root.addView(resetButton, resetParams);
+
+        dialog.setContentView(root);
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+            params.copyFrom(window.getAttributes());
+            params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            params.gravity = Gravity.BOTTOM;
+            window.setAttributes(params);
+        }
+    }
+
+    private LinearLayout categoryEditorOptionRow(String title, String value, View.OnClickListener listener) {
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dp(16), 0, dp(12), 0);
+        row.setMinimumHeight(dp(48));
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setOnClickListener(listener);
+
+        TextView titleView = editorText(title, 16, color(R.color.colorOnSurface), false);
+        row.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView valueView = editorText(value, 16, color(R.color.colorOnSurfaceVariant), false);
+        valueView.setGravity(Gravity.END);
+        row.addView(valueView);
+
+        TextView arrowView = editorText(">", 20, color(R.color.colorOnSurfaceVariant), false);
+        arrowView.setGravity(Gravity.CENTER);
+        arrowView.setPadding(dp(8), 0, 0, 0);
+        row.addView(arrowView);
+        return row;
+    }
+
+    private TextView editorCircleButton(String text, int fillColor, int textColor) {
+        TextView view = editorText(text, 24, textColor, false);
+        view.setGravity(Gravity.CENTER);
+        view.setBackground(roundedDrawable(fillColor, dp(22)));
+        view.setClickable(true);
+        view.setFocusable(true);
+        return view;
+    }
+
+    private TextView editorText(String text, int sp, int textColor, boolean bold) {
+        TextView view = new TextView(requireContext());
+        view.setText(text);
+        view.setTextSize(sp);
+        view.setTextColor(textColor);
+        view.setIncludeFontPadding(false);
+        if (bold) {
+            view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        }
+        return view;
+    }
+
+    private View editorDivider() {
+        View divider = new View(requireContext());
+        divider.setBackgroundColor(color(R.color.colorDivider));
+        divider.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+        return divider;
+    }
+
+    private GradientDrawable roundedDrawable(int fillColor, int radius) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.RECTANGLE);
+        drawable.setColor(fillColor);
+        drawable.setCornerRadius(radius);
+        return drawable;
+    }
+
+    private boolean isDuplicateCategoryName(@Nullable Category currentCategory, String name) {
+        if (name == null) {
+            return false;
+        }
+        String trimmed = name.trim();
+        for (Category category : categories) {
+            if (category == null || category.isDeleted() || category.isHidden()) {
+                continue;
+            }
+            if (currentCategory != null && category.getId().equals(currentCategory.getId())) {
+                continue;
+            }
+            if (category.getName() != null && category.getName().trim().equalsIgnoreCase(trimmed)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String cleanCategoryIcon(String icon) {
+        String cleanIcon = icon == null ? "" : icon.trim();
+        if (cleanIcon.isEmpty() || "#".equals(cleanIcon)) {
+            return DEFAULT_CATEGORY_ICON;
+        }
+        return cleanIcon;
     }
 
     // TODO: cập nhật UI thông báo delete category
@@ -1130,6 +1417,14 @@ public class TaskFragment extends Fragment implements MainActivity.TaskToolbarCo
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private int color(int colorRes) {
+        return requireContext().getColor(colorRes);
     }
 
     @Override

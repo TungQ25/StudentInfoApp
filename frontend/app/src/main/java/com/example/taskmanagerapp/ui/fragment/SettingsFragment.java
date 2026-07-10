@@ -220,7 +220,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private TextView signOutButton() {
-        TextView button = label("Sign Out", 16, color(R.color.colorOnDanger), true);
+        TextView button = label("Sign Out", 16, color(R.color.colorDangerButtonText), true);
         button.setGravity(Gravity.CENTER);
         button.setBackgroundResource(R.drawable.bg_settings_logout);
         button.setPadding(dp(18), dp(15), dp(18), dp(15));
