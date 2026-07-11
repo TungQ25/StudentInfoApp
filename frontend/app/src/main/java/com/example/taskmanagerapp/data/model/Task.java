@@ -64,6 +64,9 @@ public class Task implements Serializable {
     @ColumnInfo(name = TaskContract.COL_PERMANENT_DELETE_PENDING, defaultValue = "0")
     private boolean permanentDeletePending;
 
+    @ColumnInfo(name = TaskContract.COL_REMOTE_EXISTS, defaultValue = "0")
+    private boolean remoteExists;
+
     @SerializedName("userId")
     @ColumnInfo(name = TaskContract.COL_USER_ID)
     private String userId;
@@ -122,6 +125,7 @@ public class Task implements Serializable {
                 false,
                 false,
                 false,
+                false,
                 null);
     }
 
@@ -140,6 +144,7 @@ public class Task implements Serializable {
             boolean synced,
             boolean deleted,
             boolean permanentDeletePending,
+            boolean remoteExists,
             String userId) {
         this.id = id;
         this.title = title;
@@ -154,6 +159,7 @@ public class Task implements Serializable {
         this.synced = synced;
         this.deleted = deleted;
         this.permanentDeletePending = permanentDeletePending;
+        this.remoteExists = remoteExists;
         this.userId = userId;
         this.isSelected = false;
     }
@@ -270,6 +276,14 @@ public class Task implements Serializable {
         this.permanentDeletePending = permanentDeletePending;
     }
 
+    public boolean isRemoteExists() {
+        return remoteExists;
+    }
+
+    public void setRemoteExists(boolean remoteExists) {
+        this.remoteExists = remoteExists;
+    }
+
     public String getUserId() {
         return userId;
     }
@@ -321,6 +335,7 @@ public class Task implements Serializable {
                 true,
                 false,
                 false,
+                true,
                 remote.getUserId());
     }
 
@@ -335,6 +350,7 @@ public class Task implements Serializable {
                 && synced == task.synced
                 && deleted == task.deleted
                 && permanentDeletePending == task.permanentDeletePending
+                && remoteExists == task.remoteExists
                 && isSelected == task.isSelected
                 && Objects.equals(id, task.id)
                 && Objects.equals(title, task.title)
@@ -349,6 +365,6 @@ public class Task implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(id, title, description, categoryId, deadline, isCompleted, wontDo,
-                priority, imagePath, updatedAt, synced, deleted, permanentDeletePending, userId, isSelected);
+                priority, imagePath, updatedAt, synced, deleted, permanentDeletePending, remoteExists, userId, isSelected);
     }
 }

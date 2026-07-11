@@ -61,13 +61,15 @@ public class LoginActivity extends AppCompatActivity {
 
         setLoading(true);
         // Gửi request đăng nhập lên backend bằng Retrofit
-        RetrofitClient.getAuthApi().login(new LoginRequest(identifier, password)).enqueue(new Callback<AuthResponse>() {
+        RetrofitClient.getAuthApi().login(new LoginRequest(identifier, password,
+                preferenceHelper.getDeviceId())).enqueue(new Callback<AuthResponse>() {
             @Override
             public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
                 setLoading(false);
                 AuthResponse body = response.body();
                 if (response.isSuccessful() && body != null && body.getToken() != null) {
-                    preferenceHelper.saveAuth(body.getToken(), body.getId(), body.getUsername(), body.getEmail());
+                    preferenceHelper.saveAuth(body.getToken(), body.getId(), body.getUsername(), body.getEmail(),
+                            body.getRefreshToken(), body.getRefreshExpiresAt(), body.getDeviceId(), body.getSessionId());
                     openMain();
                 } else {
                     Toast.makeText(LoginActivity.this, "Login failed", Toast.LENGTH_SHORT).show();
@@ -85,7 +87,7 @@ public class LoginActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         btnLogin.setEnabled(!loading);
         txtRegister.setEnabled(!loading);
-        btnLogin.setText(loading ? "Signing in..." : "Login");
+        btnLogin.setText(loading ? "Signing in..." : getString(R.string.auth_login));
     }
 
     private void openMain() {

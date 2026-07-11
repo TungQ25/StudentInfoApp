@@ -88,13 +88,16 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
 
-                    <ImageView
+                    <TextView
                         android:id="@+id/tvDetailCategoryIcon"
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:contentDescription="@string/task_editor_category"
-                        android:src="@drawable/ic_nav_task_outline"
-                        app:tint="#D7DDE5" />
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:text="📥"
+                        android:textColor="#D7DDE5"
+                        android:textSize="18sp" />
 
                     <TextView
                         android:id="@+id/tvDetailCategory"

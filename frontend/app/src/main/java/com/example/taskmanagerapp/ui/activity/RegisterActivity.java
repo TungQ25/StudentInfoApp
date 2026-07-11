@@ -23,6 +23,7 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText edtUsername;
     private EditText edtEmail;
     private EditText edtPassword;
+    private EditText edtConfirmPassword;
     private Button btnRegister;
     private TextView txtLogin;
     private PreferenceHelper preferenceHelper;
@@ -41,6 +42,7 @@ public class RegisterActivity extends AppCompatActivity {
         edtUsername = findViewById(R.id.edtUsername);
         edtEmail = findViewById(R.id.edtEmail);
         edtPassword = findViewById(R.id.edtPassword);
+        edtConfirmPassword = findViewById(R.id.edtConfirmPassword);
         btnRegister = findViewById(R.id.btnRegister);
         txtLogin = findViewById(R.id.txtLogin);
 
@@ -52,6 +54,7 @@ public class RegisterActivity extends AppCompatActivity {
         String username = edtUsername.getText().toString().trim();
         String email = edtEmail.getText().toString().trim();
         String password = edtPassword.getText().toString();
+        String confirmPassword = edtConfirmPassword.getText().toString();
 
         if (username.length() < 3) {
             edtUsername.setError("Username must be at least 3 characters");
@@ -65,15 +68,21 @@ public class RegisterActivity extends AppCompatActivity {
             edtPassword.setError("Password must be at least 6 characters");
             return;
         }
+        if (!password.equals(confirmPassword)) {
+            edtConfirmPassword.setError("Passwords do not match");
+            return;
+        }
 
         setLoading(true);
-        RetrofitClient.getAuthApi().register(new RegisterRequest(username, email, password)).enqueue(new Callback<AuthResponse>() {
+        RetrofitClient.getAuthApi().register(new RegisterRequest(username, email, password,
+                preferenceHelper.getDeviceId())).enqueue(new Callback<AuthResponse>() {
             @Override
             public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
                 setLoading(false);
                 AuthResponse body = response.body();
                 if (response.isSuccessful() && body != null && body.getToken() != null) {
-                    preferenceHelper.saveAuth(body.getToken(), body.getId(), body.getUsername(), body.getEmail());
+                    preferenceHelper.saveAuth(body.getToken(), body.getId(), body.getUsername(), body.getEmail(),
+                            body.getRefreshToken(), body.getRefreshExpiresAt(), body.getDeviceId(), body.getSessionId());
                     openMain();
                 } else {
                     Toast.makeText(RegisterActivity.this, "Register failed", Toast.LENGTH_SHORT).show();
@@ -91,7 +100,7 @@ public class RegisterActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         btnRegister.setEnabled(!loading);
         txtLogin.setEnabled(!loading);
-        btnRegister.setText(loading ? "Creating..." : "Register");
+        btnRegister.setText(loading ? "Creating..." : getString(R.string.auth_register));
     }
 
     private void openMain() {

@@ -64,6 +64,7 @@ public class AddTaskActivity extends AppCompatActivity {
 
     private EditText edtTitle;
     private EditText edtDescription;
+    private TextView tvEditorCategoryIcon;
     private TextView tvEditorCategory;
     private ImageButton tvPriorityChip;
     private TextView tvDateValue;
@@ -129,6 +130,7 @@ public class AddTaskActivity extends AppCompatActivity {
     private void bindViews() {
         edtTitle = findViewById(R.id.edtTitle);
         edtDescription = findViewById(R.id.edtDescription);
+        tvEditorCategoryIcon = findViewById(R.id.tvEditorCategoryIcon);
         tvEditorCategory = findViewById(R.id.tvEditorCategory);
         tvPriorityChip = findViewById(R.id.tvPriorityChip);
         tvDateValue = findViewById(R.id.tvDateValue);
@@ -222,10 +224,10 @@ public class AddTaskActivity extends AppCompatActivity {
     private void observeCategories() {
         categoryViewModel.getCategories().observe(this, categories -> {
             categoryOptions.clear();
-            categoryOptions.add(new CategoryOption(null, "Inbox"));
+            categoryOptions.add(new CategoryOption(null, "Inbox", "\uD83D\uDCE5"));
             if (categories != null) {
                 for (Category category : categories) {
-                    categoryOptions.add(new CategoryOption(category.getId(), category.getName()));
+                    categoryOptions.add(new CategoryOption(category.getId(), category.getName(), cleanCategoryIcon(category.getIcon())));
                 }
             }
             updateCategoryTitle();
@@ -313,13 +315,13 @@ public class AddTaskActivity extends AppCompatActivity {
 
     private void showCategoryPicker() {
         if (categoryOptions.isEmpty()) {
-            categoryOptions.add(new CategoryOption(null, "Inbox"));
+            categoryOptions.add(new CategoryOption(null, "Inbox", "\uD83D\uDCE5"));
         }
         String[] labels = new String[categoryOptions.size()];
         int checked = 0;
         for (int i = 0; i < categoryOptions.size(); i++) {
             CategoryOption option = categoryOptions.get(i);
-            labels[i] = option.name;
+            labels[i] = option.icon + "  " + option.name;
             if (sameString(selectedCategoryId, option.id)) {
                 checked = i;
             }
@@ -406,6 +408,9 @@ public class AddTaskActivity extends AppCompatActivity {
             return;
         }
         tvEditorCategory.setText(getSelectedCategoryName());
+        if (tvEditorCategoryIcon != null) {
+            tvEditorCategoryIcon.setText(getSelectedCategoryIcon());
+        }
     }
 
     private String getSelectedCategoryName() {
@@ -418,6 +423,26 @@ public class AddTaskActivity extends AppCompatActivity {
             }
         }
         return "Inbox";
+    }
+
+    private String getSelectedCategoryIcon() {
+        if (isBlank(selectedCategoryId)) {
+            return "\uD83D\uDCE5";
+        }
+        for (CategoryOption option : categoryOptions) {
+            if (sameString(selectedCategoryId, option.id)) {
+                return cleanCategoryIcon(option.icon);
+            }
+        }
+        return "\uD83D\uDCE5";
+    }
+
+    private String cleanCategoryIcon(String icon) {
+        String cleanIcon = icon == null ? "" : icon.trim();
+        if (cleanIcon.isEmpty() || "#".equals(cleanIcon)) {
+            return "\uD83D\uDCCB";
+        }
+        return cleanIcon;
     }
 
     private void updatePriorityChip() {
@@ -626,10 +651,12 @@ public class AddTaskActivity extends AppCompatActivity {
     private static class CategoryOption {
         final String id;
         final String name;
+        final String icon;
 
-        CategoryOption(String id, String name) {
+        CategoryOption(String id, String name, String icon) {
             this.id = id;
             this.name = name;
+            this.icon = icon;
         }
     }
 }

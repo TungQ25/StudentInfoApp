@@ -8,6 +8,10 @@ public class AuthResponse {
     private String token;
     private String tokenType;
     private long expiresAt;
+    private String refreshToken;
+    private long refreshExpiresAt;
+    private String deviceId;
+    private String sessionId;
 
     public String getId() {
         return id;
@@ -35,5 +39,21 @@ public class AuthResponse {
 
     public long getExpiresAt() {
         return expiresAt;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public long getRefreshExpiresAt() {
+        return refreshExpiresAt;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public String getSessionId() {
+        return sessionId;
     }
 }

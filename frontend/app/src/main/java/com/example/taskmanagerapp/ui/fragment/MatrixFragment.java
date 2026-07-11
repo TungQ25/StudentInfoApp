@@ -2,7 +2,6 @@ package com.example.taskmanagerapp.ui.fragment;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,7 +9,6 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -97,7 +95,11 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
             ((MainActivity) requireActivity()).showMatrixToolbar(getString(R.string.title_matrix), this);
         }
 
-        btnAddTask.setOnClickListener(v -> addTaskLauncher.launch(new Intent(requireContext(), AddTaskActivity.class)));
+        btnAddTask.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), AddTaskActivity.class);
+            intent.putExtra(AddTaskActivity.EXTRA_FOCUS_TARGET, AddTaskActivity.FOCUS_TITLE);
+            addTaskLauncher.launch(intent);
+        });
         setupTaskDetailResultListener();
         observeData();
         taskViewModel.syncTasks();
@@ -262,6 +264,7 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
                 existing.isSynced(),
                 existing.isDeleted(),
                 existing.isPermanentDeletePending(),
+                existing.isRemoteExists(),
                 existing.getUserId());
         taskViewModel.updateTask(updatedTask);
     }
@@ -325,7 +328,6 @@ public class MatrixFragment extends Fragment implements MainActivity.TaskToolbar
         menu.setOnMenuItemClickListener(item -> {
             showCompleted = !showCompleted;
             renderMatrix();
-            Toast.makeText(requireContext(), showCompleted ? "Showing completed" : "Completed hidden", Toast.LENGTH_SHORT).show();
             return true;
         });
         menu.show();

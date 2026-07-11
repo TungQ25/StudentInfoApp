@@ -43,5 +43,13 @@
         <item name="android:padding">0dp</item>
     </style>
 
+    <style name="Widget.TaskManager.EmojiPicker" parent="">
+        <item name="android:colorBackground">@color/colorBackground</item>
+        <item name="colorSurface">@color/colorBackground</item>
+        <item name="colorControlNormal">@color/colorOnSurfaceVariant</item>
+        <item name="colorControlActivated">@color/colorAddAction</item>
+        <item name="colorAccent">@color/colorAddAction</item>
+    </style>
+
     <style name="Theme.TaskManagerApp" parent="Base.Theme.TaskManagerApp" />
 </resources>

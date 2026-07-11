@@ -50,6 +50,15 @@ public class Category {
     @Column(name = "deleted", nullable = false)
     private boolean deleted = false;
 
+    @Column(name = "deleted_at")
+    private Long deletedAt;
+
+    @Column(name = "version", nullable = false)
+    private long version = 1L;
+
+    @Column(name = "last_modified_device_id", length = 80)
+    private String lastModifiedDeviceId;
+
     public String getId() {return id; }
     public void setId(String id) { this.id = id; }
     public String getUserId() { return userId; }
@@ -74,4 +83,10 @@ public class Category {
     public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public Long getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(Long deletedAt) { this.deletedAt = deletedAt; }
+    public long getVersion() { return version; }
+    public void setVersion(long version) { this.version = version; }
+    public String getLastModifiedDeviceId() { return lastModifiedDeviceId; }
+    public void setLastModifiedDeviceId(String lastModifiedDeviceId) { this.lastModifiedDeviceId = lastModifiedDeviceId; }
 }

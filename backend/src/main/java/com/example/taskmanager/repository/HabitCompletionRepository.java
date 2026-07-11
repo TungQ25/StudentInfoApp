@@ -17,6 +17,7 @@ public interface HabitCompletionRepository extends JpaRepository<HabitCompletion
     Optional<HabitCompletion> findAccessibleById(@Param("id") String id, @Param("userId") String userId);
 
     @Modifying
-    @Query("update HabitCompletion c set c.deleted = true, c.updatedAt = :updatedAt where c.habitId = :habitId and c.userId = :userId and c.deleted = false")
+    @Query("update HabitCompletion c set c.deleted = true, c.deletedAt = :updatedAt, c.updatedAt = :updatedAt, " +
+            "c.version = c.version + 1 where c.habitId = :habitId and c.userId = :userId and c.deleted = false")
     int markHabitCompletionsDeleted(@Param("habitId") String habitId, @Param("userId") String userId, @Param("updatedAt") long updatedAt);
 }

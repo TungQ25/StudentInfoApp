@@ -149,7 +149,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
             dayLabel.setGravity(Gravity.CENTER);
             dayLabel.setText(new SimpleDateFormat("E", Locale.US).format(day.getTime()).substring(0, 1)); // Lấy ký tự đầu của thứ
             dayLabel.setTextColor(mutedColor());
-            dayLabel.setTextSize(16f);
+            dayLabel.setTextSize(13f);
             dayColumn.addView(
                     dayLabel,
                     new LinearLayout.LayoutParams(
@@ -166,12 +166,12 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
             dateLabel.setGravity(Gravity.CENTER);
             dateLabel.setText(String.valueOf(day.get(Calendar.DAY_OF_MONTH)));
             dateLabel.setTextColor(isSelected ? onPrimaryColor() : onSurfaceColor());
-            dateLabel.setTextSize(20f);
+            dateLabel.setTextSize(16f);
             dateLabel.setTypeface(Typeface.DEFAULT, isSelected ? Typeface.BOLD : Typeface.NORMAL);
             if (isSelected) dateLabel.setBackground(circleDrawable(accentColor()));
 
-            LinearLayout.LayoutParams dateParams = new LinearLayout.LayoutParams(dp(54), dp(54));
-            dateParams.topMargin = dp(14);
+            LinearLayout.LayoutParams dateParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+            dateParams.topMargin = dp(8);
             dayColumn.addView(dateLabel, dateParams);
         }
     }
@@ -193,17 +193,17 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         chip.setGravity(Gravity.CENTER);
         chip.setText(label);
         chip.setTextColor(selected ? onPrimaryColor() : mutedColor());
-        chip.setTextSize(14f);
+        chip.setTextSize(12f);
         chip.setTypeface(Typeface.DEFAULT, selected ? Typeface.BOLD : Typeface.NORMAL);
-        chip.setBackground(roundedDrawable(selected ? accentColor() : surfaceColor(), dp(22)));
+        chip.setBackground(roundedDrawable(selected ? accentColor() : surfaceColor(), dp(18)));
         chip.setOnClickListener(v -> {
             selectedFilter = filter;
             renderFilterStrip();
             renderSections();
         });
 
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(42), 1f);
-        params.setMargins(dp(4), 0, dp(4), 0);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(36), 1f);
+        params.setMargins(dp(3), 0, dp(3), 0);
         filterStrip.addView(chip, params);
     }
 
@@ -235,11 +235,11 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
     private View createSectionCard(String title, List<Habit> sectionHabits) {
         LinearLayout card = new LinearLayout(requireContext());
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(18), dp(18), dp(18), dp(14));
+        card.setPadding(dp(14), dp(14), dp(14), dp(10));
         card.setBackgroundResource(R.drawable.bg_habit_card);
 
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardParams.topMargin = dp(18);
+        cardParams.topMargin = dp(14);
         card.setLayoutParams(cardParams);
 
         LinearLayout header = new LinearLayout(requireContext());
@@ -250,7 +250,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView titleView = new TextView(requireContext());
         titleView.setText(title);
         titleView.setTextColor(onSurfaceColor());
-        titleView.setTextSize(24f);
+        titleView.setTextSize(20f);
         titleView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         header.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
@@ -258,8 +258,8 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         countView.setText(String.valueOf(sectionHabits.size()));
         countView.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
         countView.setTextColor(mutedColor());
-        countView.setTextSize(18f);
-        header.addView(countView, new LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.WRAP_CONTENT));
+        countView.setTextSize(14f);
+        header.addView(countView, new LinearLayout.LayoutParams(dp(36), ViewGroup.LayoutParams.WRAP_CONTENT));
 
         for (Habit habit : sectionHabits) {
             card.addView(createHabitRow(habit));
@@ -273,7 +273,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         LinearLayout row = new LinearLayout(requireContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(16), 0, dp(2));
+        row.setPadding(0, dp(12), 0, dp(2));
         row.setClickable(true);
         row.setFocusable(true);
         row.setOnClickListener(v -> repository.toggleCompletion(habit, periodKey(habit)));
@@ -282,21 +282,21 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         icon.setGravity(Gravity.CENTER);
         icon.setText(initials(habit.getTitle()));
         icon.setTextColor(onPrimaryColor());
-        icon.setTextSize(12f);
+        icon.setTextSize(11f);
         icon.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         icon.setBackground(circleDrawable(completed ? accentColor() : habit.getColor()));
-        row.addView(icon, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(38), dp(38)));
 
         LinearLayout titleColumn = new LinearLayout(requireContext());
         titleColumn.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        titleParams.setMarginStart(dp(14));
+        titleParams.setMarginStart(dp(12));
         row.addView(titleColumn, titleParams);
 
         TextView title = new TextView(requireContext());
         title.setText(habit.getTitle());
         title.setTextColor(completed ? accentColor() : onSurfaceColor());
-        title.setTextSize(22f);
+        title.setTextSize(18f);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setSingleLine(false);
         titleColumn.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -304,19 +304,19 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         TextView frequency = new TextView(requireContext());
         frequency.setText(labelForFrequency(habit.getFrequency()));
         frequency.setTextColor(mutedColor());
-        frequency.setTextSize(13f);
+        frequency.setTextSize(12f);
         titleColumn.addView(frequency, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         LinearLayout statColumn = new LinearLayout(requireContext());
         statColumn.setGravity(Gravity.END);
         statColumn.setOrientation(LinearLayout.VERTICAL);
-        row.addView(statColumn, new LinearLayout.LayoutParams(dp(96), ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(statColumn, new LinearLayout.LayoutParams(dp(76), ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView totalDays = new TextView(requireContext());
         totalDays.setGravity(Gravity.END);
         totalDays.setText(String.valueOf(habit.getTotalDays()));
         totalDays.setTextColor(completed ? accentColor() : onSurfaceColor());
-        totalDays.setTextSize(25f);
+        totalDays.setTextSize(20f);
         totalDays.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         statColumn.addView(totalDays, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -324,7 +324,7 @@ public class HabitFragment extends Fragment implements MainActivity.HabitToolbar
         label.setGravity(Gravity.END);
         label.setText(completed ? "Done" : "Total Days");
         label.setTextColor(mutedColor());
-        label.setTextSize(14f);
+        label.setTextSize(12f);
         statColumn.addView(label, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         return row;

@@ -60,6 +60,7 @@ public class Category implements Serializable {
     @SerializedName("deleted")
     private boolean deleted;
 
+    // TODO: Thêm permanentDeletePending cho category
     @Ignore
     public Category(@NonNull String name, String icon, String userId, int sortOrder) {
         this(UUID.randomUUID().toString(), userId == null ? "" : userId, name, icon, null, false, -1, sortOrder, false, System.currentTimeMillis(), System.currentTimeMillis(), false, false);

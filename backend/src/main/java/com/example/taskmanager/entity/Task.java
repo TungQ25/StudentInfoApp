@@ -53,6 +53,12 @@ public class Task {
     @Column(name = "user_id", length = 36)
     private String userId;
 
+    @Column(name = "version", nullable = false)
+    private long version = 1L;
+
+    @Column(name = "last_modified_device_id", length = 80)
+    private String lastModifiedDeviceId;
+
     public String getId() {
         return id;
     }
@@ -155,5 +161,21 @@ public class Task {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void setVersion(long version) {
+        this.version = version;
+    }
+
+    public String getLastModifiedDeviceId() {
+        return lastModifiedDeviceId;
+    }
+
+    public void setLastModifiedDeviceId(String lastModifiedDeviceId) {
+        this.lastModifiedDeviceId = lastModifiedDeviceId;
     }
 }

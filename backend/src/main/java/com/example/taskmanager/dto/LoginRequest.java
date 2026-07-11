@@ -9,6 +9,8 @@ public record LoginRequest(
 
         @NotBlank
         @Size(min = 6, max = 100)
-        String password
+        String password,
+
+        String deviceId
 ) {
 }

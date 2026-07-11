@@ -57,14 +57,17 @@ public interface TaskDao {
     @Query("SELECT * FROM tasks WHERE deleted = 1 AND permanent_delete_pending = 0 AND user_id = :userId ORDER BY updated_at ASC")
     List<Task> getDeletedTasks(String userId);
 
-    @Query("UPDATE tasks SET synced = 1, deleted = 0, permanent_delete_pending = 0 WHERE id = :taskId AND user_id = :userId")
+    @Query("UPDATE tasks SET synced = 1, deleted = 0, permanent_delete_pending = 0, remote_exists = 1 WHERE id = :taskId AND user_id = :userId")
     int markSynced(String taskId, String userId);
 
-    @Query("UPDATE tasks SET synced = 1, deleted = 1, permanent_delete_pending = 0 WHERE id = :taskId AND user_id = :userId")
+    @Query("UPDATE tasks SET synced = 1, deleted = 1, permanent_delete_pending = 0, remote_exists = 1 WHERE id = :taskId AND user_id = :userId")
     int markDeletedSynced(String taskId, String userId);
 
     @Query("UPDATE tasks SET deleted = 1, synced = 0, permanent_delete_pending = 0, updated_at = :updatedAt WHERE id = :taskId AND user_id = :userId")
     int markDeletedForSync(String taskId, String userId, long updatedAt);
+
+    @Query("UPDATE tasks SET deleted = 0, synced = 0, permanent_delete_pending = 0, updated_at = :updatedAt WHERE id = :taskId AND user_id = :userId AND deleted = 1 AND permanent_delete_pending = 0")
+    int markRestoredForSync(String taskId, String userId, long updatedAt);
 
     @Query("UPDATE tasks SET deleted = 1, synced = 0, updated_at = :updatedAt WHERE category_id = :categoryId AND user_id = :userId AND deleted = 0")
     int markCategoryTasksDeleted(String categoryId, String userId, long updatedAt);
@@ -83,6 +86,12 @@ public interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE deleted = 1 AND synced = 1 AND user_id = :userId AND id NOT IN (:taskIds)")
     int deleteSyncedTrashNotIn(String userId, List<String> taskIds);
+
+    @Query("DELETE FROM tasks WHERE remote_exists = 1 AND synced = 1 AND permanent_delete_pending = 0 AND user_id = :userId")
+    int deleteAllRemoteSyncedTasks(String userId);
+
+    @Query("DELETE FROM tasks WHERE remote_exists = 1 AND synced = 1 AND permanent_delete_pending = 0 AND user_id = :userId AND id NOT IN (:taskIds)")
+    int deleteRemoteSyncedTasksNotIn(String userId, List<String> taskIds);
 
     @Query("DELETE FROM tasks WHERE deleted = 1 AND user_id = :userId")
     int deleteAllTrash(String userId);

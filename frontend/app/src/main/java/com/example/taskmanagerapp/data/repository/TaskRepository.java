@@ -98,6 +98,20 @@ public class TaskRepository {
         });
     }
 
+    public void restoreTask(String id) {
+        ioExecutor.execute(() -> {
+            if (id == null) {
+                return;
+            }
+
+            String userId = currentUserId();
+            int updated = dao.markRestoredForSync(id, userId, System.currentTimeMillis());
+            if (updated > 0) {
+                syncManager.syncNow();
+            }
+        });
+    }
+
     public void permanentlyDeleteTask(String id) {
         ioExecutor.execute(() -> {
             if (id == null) {
