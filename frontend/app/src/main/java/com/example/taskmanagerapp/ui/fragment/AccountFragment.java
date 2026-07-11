@@ -6,10 +6,12 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -18,12 +20,18 @@ import com.example.taskmanagerapp.R;
 import com.example.taskmanagerapp.utils.PreferenceHelper;
 
 public class AccountFragment extends Fragment {
+    private static final long ENTER_DURATION_MS = 280L;
+    private static final long EXIT_DURATION_MS = 220L;
+    private static final long SCRIM_DURATION_MS = 180L;
+
     private View rootView;
+    private View scrimView;
     private View panelView;
     private ScrollView scrollView;
     private PreferenceHelper preferenceHelper;
     private float dragStartY;
     private boolean draggingDown;
+    private boolean dismissing;
     private int dismissDistance;
     private int touchSlop;
     private View.OnTouchListener dragTouchListener;
@@ -38,15 +46,19 @@ public class AccountFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         rootView = view;
+        scrimView = view.findViewById(R.id.accountScrim);
         scrollView = view.findViewById(R.id.accountScroll);
         panelView = scrollView;
         preferenceHelper = new PreferenceHelper(requireContext());
         dismissDistance = dp(96);
         touchSlop = ViewConfiguration.get(requireContext()).getScaledTouchSlop();
 
+        prepareEntranceAnimation();
         bindProfile();
         setupActions(view);
         setupDragToDismiss();
+        setupBackHandler();
+        rootView.post(this::playEntranceAnimation);
     }
 
     private void bindProfile() {
@@ -60,7 +72,7 @@ public class AccountFragment extends Fragment {
     }
 
     private void setupActions(View view) {
-        view.findViewById(R.id.btnAccountBack).setOnClickListener(v -> dismissSelf());
+        view.findViewById(R.id.btnAccountBack).setOnClickListener(v -> dismissWithSlideDown());
         setComingSoon(R.id.avatarRow, "Avatar");
         setComingSoon(R.id.nicknameRow, "Nickname");
         setComingSoon(R.id.emailRow, "Email");
@@ -68,6 +80,45 @@ public class AccountFragment extends Fragment {
         setComingSoon(R.id.twoStepRow, "2-Step Verification");
         setComingSoon(R.id.deviceRow, "Device Management");
         setComingSoon(R.id.btnDeleteAccount, "Delete Account");
+    }
+
+    private void setupBackHandler() {
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                dismissWithSlideDown();
+            }
+        });
+    }
+
+    private void prepareEntranceAnimation() {
+        if (scrimView != null) {
+            scrimView.setAlpha(0f);
+        }
+        if (panelView != null) {
+            panelView.setTranslationY(getResources().getDisplayMetrics().heightPixels);
+        }
+    }
+
+    private void playEntranceAnimation() {
+        if (rootView == null || panelView == null) {
+            return;
+        }
+
+        panelView.setTranslationY(rootView.getHeight() + dp(32));
+        panelView.animate()
+                .translationY(0f)
+                .setDuration(ENTER_DURATION_MS)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+
+        if (scrimView != null) {
+            scrimView.animate()
+                    .alpha(1f)
+                    .setDuration(SCRIM_DURATION_MS)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+        }
     }
 
     private void setComingSoon(int viewId, String feature) {
@@ -82,6 +133,9 @@ public class AccountFragment extends Fragment {
                     dragStartY = event.getRawY();
                     draggingDown = false;
                     panelView.animate().cancel();
+                    if (scrimView != null) {
+                        scrimView.animate().cancel();
+                    }
                     return false;
                 case MotionEvent.ACTION_MOVE:
                     return handleDragMove(event);
@@ -134,16 +188,39 @@ public class AccountFragment extends Fragment {
             panelView.animate()
                     .translationY(0f)
                     .setDuration(160L)
+                    .setInterpolator(new DecelerateInterpolator())
                     .start();
         }
         return true;
     }
 
     private void dismissWithSlideDown() {
+        if (dismissing) {
+            return;
+        }
+        dismissing = true;
+        if (panelView == null) {
+            dismissSelf();
+            return;
+        }
+
+        panelView.animate().cancel();
+        if (scrimView != null) {
+            scrimView.animate().cancel();
+        }
+
         float target = rootView == null ? dp(720) : rootView.getHeight() + dp(32);
+        if (scrimView != null) {
+            scrimView.animate()
+                    .alpha(0f)
+                    .setDuration(SCRIM_DURATION_MS)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+        }
         panelView.animate()
                 .translationY(target)
-                .setDuration(220L)
+                .setDuration(EXIT_DURATION_MS)
+                .setInterpolator(new DecelerateInterpolator())
                 .withEndAction(this::dismissSelf)
                 .start();
     }
@@ -182,6 +259,7 @@ public class AccountFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         rootView = null;
+        scrimView = null;
         panelView = null;
         scrollView = null;
     }

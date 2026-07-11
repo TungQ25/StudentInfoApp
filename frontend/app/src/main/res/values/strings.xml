@@ -27,6 +27,9 @@
     <string name="task_editor_time">Time</string>
     <string name="task_editor_no_date">No date</string>
     <string name="task_editor_no_time">No time</string>
+    <string name="task_detail_edit_deadline">Edit date &amp; time</string>
+    <string name="task_detail_include_time">Include time</string>
+    <string name="task_detail_clear_deadline">Clear</string>
     <string name="task_editor_change_date">Change date</string>
     <string name="task_editor_change_time">Change time</string>
     <string name="task_editor_reminder">Reminder</string>
@@ -46,16 +49,25 @@
     <string name="settings_logout_button">ĐĂNG XUẤT</string>
     <string name="open_settings">Cài đặt</string>
 
-    <string name="auth_login_title">Login</string>
+    <string name="auth_login_title">Welcome back</string>
+    <string name="auth_login_subtitle">Sign in to continue your tasks</string>
     <string name="auth_register_title">Create account</string>
+    <string name="auth_register_subtitle">Start organizing your day</string>
     <string name="auth_identifier">Username or email</string>
     <string name="auth_username">Username</string>
     <string name="auth_email">Email</string>
     <string name="auth_password">Password</string>
-    <string name="auth_login">Login</string>
-    <string name="auth_register">Register</string>
-    <string name="auth_open_register">Tạo tài khoản mới</string>
-    <string name="auth_open_login">Đã có tài khoản? Login</string>
+    <string name="auth_confirm_password">Confirm password</string>
+    <string name="auth_identifier_hint">username</string>
+    <string name="auth_username_hint">Your username</string>
+    <string name="auth_email_hint">you@example.com</string>
+    <string name="auth_password_hint">••••••</string>
+    <string name="auth_login">Sign in</string>
+    <string name="auth_register">Create account</string>
+    <string name="auth_no_account">No account yet?</string>
+    <string name="auth_have_account">Already have an account?</string>
+    <string name="auth_open_register">Create account</string>
+    <string name="auth_open_login">Sign in</string>
 
     <string name="task_attachment_label">Ảnh đính kèm</string>
     <string name="task_attachment_pick">CHỌN ẢNH</string>

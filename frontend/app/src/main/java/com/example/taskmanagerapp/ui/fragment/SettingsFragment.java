@@ -3,26 +3,24 @@ package com.example.taskmanagerapp.ui.fragment;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.CompoundButton;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.Space;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.taskmanagerapp.R;
@@ -38,6 +36,10 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class SettingsFragment extends Fragment {
+    private static final String ARG_OVERLAY_MODE = "overlayMode";
+    private static final long ENTER_DURATION_MS = 280L;
+    private static final long EXIT_DURATION_MS = 220L;
+    private static final long SCRIM_DURATION_MS = 180L;
     private static final String[] THEME_LABELS = {"Light", "Dark", "System"};
     private static final String[] THEME_KEYS = {
             PreferenceHelper.THEME_LIGHT,
@@ -45,244 +47,218 @@ public class SettingsFragment extends Fragment {
             PreferenceHelper.THEME_SYSTEM
     };
 
-    private FrameLayout root;
-    private View mainPage;
+    private View rootView;
+    private View scrimView;
+    private View panelView;
+    private View topBarView;
+    private TextView avatarView;
+    private TextView nameView;
+    private TextView emailView;
+    private TextView themeValueView;
+    private Switch notificationsSwitch;
     private PreferenceHelper preferenceHelper;
+    private boolean overlayMode;
+    private boolean dismissing;
+
+    public static SettingsFragment newOverlayInstance() {
+        SettingsFragment fragment = new SettingsFragment();
+        Bundle args = new Bundle();
+        args.putBoolean(ARG_OVERLAY_MODE, true);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        overlayMode = getArguments() != null && getArguments().getBoolean(ARG_OVERLAY_MODE, false);
+    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        preferenceHelper = new PreferenceHelper(requireContext());
-        root = new FrameLayout(requireContext());
-        root.setBackgroundColor(color(R.color.colorBackground));
-
-        mainPage = createMainPage();
-
-        root.addView(mainPage);
-        return root;
+        return inflater.inflate(R.layout.fragment_settings, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if (requireActivity() instanceof MainActivity) {
+        rootView = view;
+        preferenceHelper = new PreferenceHelper(requireContext());
+
+        bindViews(view);
+        configurePresentation();
+        setupOverlayInsets();
+        bindProfile();
+        bindActions(view);
+
+        if (overlayMode) {
+            setupBackHandler();
+            rootView.post(this::playEntranceAnimation);
+        } else if (requireActivity() instanceof MainActivity) {
             ((MainActivity) requireActivity()).showSimpleToolbar(getString(R.string.title_settings));
         }
     }
 
-    private View createMainPage() {
-        FrameLayout page = new FrameLayout(requireContext());
-
-        LinearLayout content = pageContent();
-        content.setPadding(dp(14), dp(14), dp(14), dp(118));
-        content.addView(profileCard());
-        content.addView(space(18));
-
-        LinearLayout appearanceGroup = cardContainer();
-        appearanceGroup.addView(settingsRow("AP", "Appearance", themeSummary(), v -> showThemeDialog(), true));
-        appearanceGroup.addView(divider());
-        appearanceGroup.addView(notificationRow());
-        content.addView(appearanceGroup);
-        content.addView(space(16));
-
-        LinearLayout generalGroup = cardContainer();
-        generalGroup.addView(settingsRow("DT", "Date & Time", null, v -> notImplemented("Date & Time"), true));
-        generalGroup.addView(divider());
-        generalGroup.addView(settingsRow("GN", "General", null, v -> openGeneralSettings(), true));
-        content.addView(generalGroup);
-        content.addView(space(16));
-
-        LinearLayout aboutGroup = cardContainer();
-        aboutGroup.addView(settingsRow("AB", "About", "v1.0", v -> Toast.makeText(requireContext(), "TaskManagerApp v1.0", Toast.LENGTH_SHORT).show(), true));
-        content.addView(aboutGroup);
-
-        ScrollView scrollView = new ScrollView(requireContext());
-        scrollView.setClipToPadding(false);
-        scrollView.addView(content, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        page.addView(scrollView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        FrameLayout.LayoutParams signOutParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM
-        );
-        signOutParams.setMargins(dp(18), 0, dp(18), dp(18));
-        page.addView(signOutButton(), signOutParams);
-        return page;
+    private void bindViews(View view) {
+        scrimView = view.findViewById(R.id.settingsScrim);
+        panelView = view.findViewById(R.id.settingsPanel);
+        topBarView = view.findViewById(R.id.settingsTopBar);
+        avatarView = view.findViewById(R.id.tvSettingsAvatar);
+        nameView = view.findViewById(R.id.tvSettingsName);
+        emailView = view.findViewById(R.id.tvSettingsEmail);
+        themeValueView = view.findViewById(R.id.tvSettingsThemeValue);
+        notificationsSwitch = view.findViewById(R.id.switchSettingsNotifications);
     }
 
-    private View profileCard() {
-        LinearLayout card = cardContainer();
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(16), dp(14), dp(12), dp(14));
-        row.setMinimumHeight(dp(88));
-        row.setOnClickListener(v -> openAccountFragment());
-        card.addView(row);
-
-        row.addView(avatarView(dp(54), displayInitials(), 17));
-
-        LinearLayout textColumn = new LinearLayout(requireContext());
-        textColumn.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        textParams.setMargins(dp(16), 0, dp(8), 0);
-        row.addView(textColumn, textParams);
-
-        TextView name = label(displayName(), 16, color(R.color.colorOnSurface), true);
-        name.setSingleLine(true);
-        textColumn.addView(name);
-
-        TextView email = label(displayEmail(), 13, color(R.color.colorOnSurfaceVariant), false);
-        email.setPadding(0, dp(6), 0, 0);
-        email.setSingleLine(true);
-        textColumn.addView(email);
-
-        row.addView(arrow());
-        return card;
+    private void configurePresentation() {
+        if (topBarView != null) {
+            topBarView.setVisibility(overlayMode ? View.VISIBLE : View.GONE);
+        }
+        if (scrimView != null) {
+            scrimView.setVisibility(overlayMode ? View.VISIBLE : View.GONE);
+            scrimView.setAlpha(0f);
+            scrimView.setOnClickListener(overlayMode ? v -> dismissWithSlideDown() : null);
+        }
+        if (rootView != null) {
+            rootView.setBackgroundColor(overlayMode ? Color.TRANSPARENT : color(R.color.colorBackground));
+        }
+        if (panelView != null) {
+            panelView.setBackgroundResource(overlayMode ? R.drawable.bg_task_detail_dialog : 0);
+            if (!overlayMode) {
+                panelView.setBackgroundColor(color(R.color.colorBackground));
+            }
+            setPanelTopMargin(overlayMode ? dp(18) : 0);
+            panelView.setElevation(overlayMode ? dp(56) : 0f);
+            panelView.setTranslationY(overlayMode ? getResources().getDisplayMetrics().heightPixels : 0f);
+        }
     }
 
-    private View notificationRow() {
-        LinearLayout row = baseRow();
-        row.setOnClickListener(null);
-        row.addView(rowIcon("NT"));
-
-        TextView titleView = label("Notifications", 16, color(R.color.colorOnSurface), false);
-        row.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        Switch toggle = new Switch(requireContext());
-        toggle.setChecked(preferenceHelper.isNotificationsEnabled());
-        tintSwitch(toggle);
-        toggle.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) -> {
-            preferenceHelper.setNotificationsEnabled(isChecked);
-            Toast.makeText(requireContext(), isChecked ? "Notifications enabled" : "Notifications disabled", Toast.LENGTH_SHORT).show();
+    private void setupOverlayInsets() {
+        if (!overlayMode || rootView == null) {
+            return;
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (view, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(0, 0, 0, systemBars.bottom);
+            return insets;
         });
-        row.setOnClickListener(v -> toggle.setChecked(!toggle.isChecked()));
-        row.addView(toggle);
-        return row;
+        ViewCompat.requestApplyInsets(rootView);
     }
 
-    private View settingsRow(String icon, String title, String value, View.OnClickListener listener, boolean showArrow) {
-        LinearLayout row = baseRow();
-        if (listener != null) {
-            row.setOnClickListener(listener);
+    private void setPanelTopMargin(int topMargin) {
+        if (panelView == null || !(panelView.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) {
+            return;
+        }
+        ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) panelView.getLayoutParams();
+        if (params.topMargin == topMargin) {
+            return;
+        }
+        params.topMargin = topMargin;
+        panelView.setLayoutParams(params);
+    }
+
+    private void bindProfile() {
+        avatarView.setText(displayInitials());
+        nameView.setText(displayName());
+        emailView.setText(displayEmail());
+        themeValueView.setText(themeSummary());
+    }
+
+    private void bindActions(View view) {
+        view.findViewById(R.id.settingsProfileRow).setOnClickListener(v -> openAccountFragment());
+        view.findViewById(R.id.settingsAppearanceRow).setOnClickListener(v -> showThemeDialog());
+        view.findViewById(R.id.settingsDateTimeRow).setOnClickListener(v -> notImplemented("Date & Time"));
+        view.findViewById(R.id.settingsGeneralRow).setOnClickListener(v -> openGeneralSettings());
+        view.findViewById(R.id.settingsAboutRow).setOnClickListener(v ->
+                Toast.makeText(requireContext(), "TaskManagerApp v1.0", Toast.LENGTH_SHORT).show());
+        view.findViewById(R.id.btnSettingsSignOut).setOnClickListener(v -> logout());
+
+        View backButton = view.findViewById(R.id.btnSettingsBack);
+        if (backButton != null) {
+            backButton.setOnClickListener(v -> dismissWithSlideDown());
         }
 
-        if (icon != null) {
-            row.addView(rowIcon(icon));
+        notificationsSwitch.setChecked(preferenceHelper.isNotificationsEnabled());
+        tintSwitch(notificationsSwitch);
+        notificationsSwitch.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) -> {
+            preferenceHelper.setNotificationsEnabled(isChecked);
+            Toast.makeText(
+                    requireContext(),
+                    isChecked ? "Notifications enabled" : "Notifications disabled",
+                    Toast.LENGTH_SHORT
+            ).show();
+        });
+        view.findViewById(R.id.settingsNotificationRow).setOnClickListener(v ->
+                notificationsSwitch.setChecked(!notificationsSwitch.isChecked()));
+    }
+
+    private void setupBackHandler() {
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                dismissWithSlideDown();
+            }
+        });
+    }
+
+    private void playEntranceAnimation() {
+        if (rootView == null || panelView == null) {
+            return;
         }
 
-        TextView titleView = label(title, 16, color(R.color.colorOnSurface), false);
-        row.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        panelView.setTranslationY(rootView.getHeight() + dp(32));
+        panelView.animate()
+                .translationY(0f)
+                .setDuration(ENTER_DURATION_MS)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
 
-        if (value != null) {
-            TextView valueView = label(value, 14, color(R.color.colorOnSurfaceVariant), false);
-            valueView.setGravity(Gravity.END);
-            valueView.setSingleLine(true);
-            LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f);
-            valueParams.setMargins(dp(8), 0, 0, 0);
-            row.addView(valueView, valueParams);
+        if (scrimView != null) {
+            scrimView.animate()
+                    .alpha(1f)
+                    .setDuration(SCRIM_DURATION_MS)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+        }
+    }
+
+    private void dismissWithSlideDown() {
+        if (!overlayMode) {
+            return;
+        }
+        if (dismissing) {
+            return;
+        }
+        dismissing = true;
+        if (panelView == null) {
+            dismissSelf();
+            return;
         }
 
-        if (showArrow) {
-            row.addView(arrow());
+        panelView.animate().cancel();
+        if (scrimView != null) {
+            scrimView.animate().cancel();
         }
-        return row;
-    }
 
-    private LinearLayout baseRow() {
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(18), dp(12), dp(14), dp(12));
-        row.setMinimumHeight(dp(58));
-        row.setClickable(true);
-        row.setFocusable(true);
-        return row;
-    }
-
-    private TextView rowIcon(String text) {
-        TextView iconView = label(text, 11, color(R.color.colorAddAction), true);
-        iconView.setGravity(Gravity.CENTER);
-        iconView.setBackground(roundedDrawable(color(R.color.colorPrimaryContainer), dp(10)));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(34), dp(34));
-        params.setMargins(0, 0, dp(14), 0);
-        iconView.setLayoutParams(params);
-        return iconView;
-    }
-
-    private LinearLayout cardContainer() {
-        LinearLayout card = new LinearLayout(requireContext());
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackgroundResource(R.drawable.bg_settings_card);
-        card.setClipToOutline(true);
-        return card;
-    }
-
-    private TextView signOutButton() {
-        TextView button = label("Sign Out", 16, color(R.color.colorOnDanger), true);
-        button.setGravity(Gravity.CENTER);
-        button.setBackgroundResource(R.drawable.bg_settings_logout);
-        button.setPadding(dp(18), dp(15), dp(18), dp(15));
-        button.setMinHeight(dp(54));
-        button.setOnClickListener(v -> logout());
-        return button;
-    }
-
-    private TextView avatarView(int size, String text, int textSize) {
-        TextView avatar = label(text, textSize, color(R.color.colorAddAction), true);
-        avatar.setGravity(Gravity.CENTER);
-        avatar.setBackgroundResource(R.drawable.bg_settings_avatar);
-        avatar.setMinWidth(size);
-        avatar.setMinHeight(size);
-        return avatar;
-    }
-
-    private TextView arrow() {
-        TextView arrow = label(">", 20, color(R.color.colorOnSurfaceVariant), false);
-        arrow.setGravity(Gravity.CENTER);
-        arrow.setPadding(dp(10), 0, 0, 0);
-        return arrow;
-    }
-
-    private TextView label(String text, int sp, int textColor, boolean bold) {
-        TextView view = new TextView(requireContext());
-        view.setText(text);
-        view.setTextSize(sp);
-        view.setTextColor(textColor);
-        view.setIncludeFontPadding(false);
-        if (bold) {
-            view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        float target = rootView == null ? dp(720) : rootView.getHeight() + dp(32);
+        if (scrimView != null) {
+            scrimView.animate()
+                    .alpha(0f)
+                    .setDuration(SCRIM_DURATION_MS)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
         }
-        return view;
+        panelView.animate()
+                .translationY(target)
+                .setDuration(EXIT_DURATION_MS)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(this::dismissSelf)
+                .start();
     }
 
-    private LinearLayout pageContent() {
-        LinearLayout content = new LinearLayout(requireContext());
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(14), dp(16), dp(14), dp(18));
-        return content;
-    }
-
-    private View divider() {
-        View divider = new View(requireContext());
-        divider.setBackgroundColor(color(R.color.colorDivider));
-        divider.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
-        return divider;
-    }
-
-    private Space space(int dp) {
-        Space space = new Space(requireContext());
-        space.setLayoutParams(new LinearLayout.LayoutParams(1, dp(dp)));
-        return space;
-    }
-
-    private GradientDrawable roundedDrawable(int fillColor, int radius) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setShape(GradientDrawable.RECTANGLE);
-        drawable.setColor(fillColor);
-        drawable.setCornerRadius(radius);
-        return drawable;
+    private void dismissSelf() {
+        getParentFragmentManager().popBackStack();
     }
 
     private void tintSwitch(Switch toggle) {
@@ -324,6 +300,9 @@ public class SettingsFragment extends Fragment {
                 .setSingleChoiceItems(THEME_LABELS, checked, (dialog, which) -> {
                     String selectedTheme = THEME_KEYS[which];
                     preferenceHelper.setTheme(selectedTheme);
+                    if (themeValueView != null) {
+                        themeValueView.setText(THEME_LABELS[which]);
+                    }
                     applyThemeMode(selectedTheme);
                     dialog.dismiss();
                     requireActivity().recreate();
@@ -416,8 +395,21 @@ public class SettingsFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        if (panelView != null) {
+            panelView.animate().cancel();
+        }
+        if (scrimView != null) {
+            scrimView.animate().cancel();
+        }
         super.onDestroyView();
-        root = null;
-        mainPage = null;
+        rootView = null;
+        scrimView = null;
+        panelView = null;
+        topBarView = null;
+        avatarView = null;
+        nameView = null;
+        emailView = null;
+        themeValueView = null;
+        notificationsSwitch = null;
     }
 }

@@ -43,12 +43,16 @@
             android:paddingStart="4dp"
             android:paddingEnd="8dp">
 
-            <ImageView
+            <TextView
+                android:id="@+id/tvEditorCategoryIcon"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:contentDescription="@string/task_editor_category"
-                android:src="@drawable/ic_nav_task_outline"
-                app:tint="#D7DDE5" />
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:text="📥"
+                android:textColor="#D7DDE5"
+                android:textSize="18sp" />
 
             <TextView
                 android:id="@+id/tvEditorCategory"

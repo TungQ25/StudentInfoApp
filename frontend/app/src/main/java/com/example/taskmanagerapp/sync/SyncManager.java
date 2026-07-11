@@ -214,12 +214,14 @@ public class SyncManager {
             task.setUserId(userId);
             Response<?> response = pushTask(task); // "?" ko quan trọng trả về kiểu gì, chỉ cần kiểm tra isSuccessful()
 
-            if (response.isSuccessful() || (response.code() == 404 && task.isDeleted())) {
+            if (response.isSuccessful()) {
                 if (task.isDeleted()) {
                     taskDao.markDeletedSynced(task.getId(), userId);
                 } else {
                     taskDao.markSynced(task.getId(), userId);
                 }
+            } else if (response.code() == 404 && (task.isRemoteExists() || task.isDeleted())) {
+                taskDao.deletePermanently(task.getId(), userId);
             } else if (response.code() == 401) {
                 preferenceHelper.clearAuth();
                 return false;
@@ -239,10 +241,20 @@ public class SyncManager {
 
         Response<Task> response = todoApi.updateTask(task.getId(), task).execute();
         Log.d(TAG, "PUT /api/tasks/" + task.getId() + " -> " + response.code());
-        if (response.code() == 404) {
+        if (response.code() == 404 && !task.isRemoteExists()) {
             Response<Task> createResponse = todoApi.createTask(task).execute();
             Log.d(TAG, "POST /api/tasks -> " + createResponse.code());
             return createResponse;
+        }
+        if (response.code() == 404 && task.isRemoteExists()) {
+            Response<Task> restoreResponse = todoApi.restoreTask(task.getId()).execute();
+            Log.d(TAG, "POST /api/tasks/" + task.getId() + "/restore -> " + restoreResponse.code());
+            if (restoreResponse.isSuccessful()) {
+                Response<Task> retryResponse = todoApi.updateTask(task.getId(), task).execute();
+                Log.d(TAG, "PUT /api/tasks/" + task.getId() + " after restore -> " + retryResponse.code());
+                return retryResponse;
+            }
+            return restoreResponse;
         }
         return response;
     }
@@ -314,6 +326,7 @@ public class SyncManager {
         }
 
         List<Task> mapped = new ArrayList<>();
+        List<String> remoteTaskIds = new ArrayList<>();
 
         List<Task> activeTasks = activeResponse.body();
         if (activeTasks != null) {
@@ -321,6 +334,7 @@ public class SyncManager {
                 Task task = Task.fromRemote(remote);
                 task.setUserId(userId);
                 task.setDeleted(false);
+                remoteTaskIds.add(task.getId());
                 addRemoteTaskForUpsert(userId, mapped, task);
             }
         }
@@ -333,6 +347,7 @@ public class SyncManager {
                 Task task = Task.fromRemote(remote);
                 task.setUserId(userId);
                 task.setDeleted(true);
+                remoteTaskIds.add(task.getId());
                 remoteTrashIds.add(task.getId());
                 addRemoteTaskForUpsert(userId, mapped, task);
             }
@@ -342,6 +357,8 @@ public class SyncManager {
             taskDao.upsertAll(mapped);
         }
 
+        deleteTasksMissingFromRemote(userId, remoteTaskIds);
+
         if (remoteTrashIds.isEmpty()) {
             taskDao.deleteAllSyncedTrash(userId);
         } else {
@@ -349,6 +366,14 @@ public class SyncManager {
         }
 
         return true;
+    }
+
+    private void deleteTasksMissingFromRemote(String userId, List<String> remoteTaskIds) {
+        if (remoteTaskIds.isEmpty()) {
+            taskDao.deleteAllRemoteSyncedTasks(userId);
+        } else {
+            taskDao.deleteRemoteSyncedTasksNotIn(userId, remoteTaskIds);
+        }
     }
 
     /**

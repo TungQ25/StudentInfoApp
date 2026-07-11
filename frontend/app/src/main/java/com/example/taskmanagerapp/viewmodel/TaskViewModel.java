@@ -50,6 +50,10 @@ public class TaskViewModel extends AndroidViewModel {
         repository.deleteTask(id);
     }
 
+    public void restoreTask(String id) {
+        repository.restoreTask(id);
+    }
+
     public void permanentlyDeleteTask(String id) {
         repository.permanentlyDeleteTask(id);
     }
